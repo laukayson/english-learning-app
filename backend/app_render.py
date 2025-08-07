@@ -596,7 +596,126 @@ def get_features():
 def favicon():
     return '', 204
 
-# Debug endpoint for testing Chrome installation
+# Debug endpoint for database repair
+@app.route('/api/debug/repair-db')
+def repair_database():
+    """Repair and verify database structure"""
+    repair_info = {
+        'timestamp': datetime.now().isoformat(),
+        'operations': []
+    }
+    
+    try:
+        # Step 1: Check if user_progress table exists
+        try:
+            result = db_service.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='user_progress'")
+            if result:
+                repair_info['operations'].append({
+                    'step': 'check_table_exists',
+                    'success': True,
+                    'message': 'user_progress table exists'
+                })
+            else:
+                repair_info['operations'].append({
+                    'step': 'check_table_exists', 
+                    'success': False,
+                    'message': 'user_progress table does not exist'
+                })
+        except Exception as e:
+            repair_info['operations'].append({
+                'step': 'check_table_exists',
+                'success': False,
+                'error': str(e)
+            })
+        
+        # Step 2: Drop and recreate user_progress table
+        try:
+            db_service.execute_update("DROP TABLE IF EXISTS user_progress")
+            repair_info['operations'].append({
+                'step': 'drop_table',
+                'success': True,
+                'message': 'Dropped user_progress table'
+            })
+        except Exception as e:
+            repair_info['operations'].append({
+                'step': 'drop_table',
+                'success': False,
+                'error': str(e)
+            })
+        
+        # Step 3: Recreate table with clean structure
+        try:
+            create_query = '''
+            CREATE TABLE user_progress (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                level INTEGER DEFAULT 1,
+                experience_points INTEGER DEFAULT 0,
+                total_experience INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+            '''
+            db_service.execute_update(create_query)
+            repair_info['operations'].append({
+                'step': 'create_table',
+                'success': True,
+                'message': 'Created clean user_progress table'
+            })
+        except Exception as e:
+            repair_info['operations'].append({
+                'step': 'create_table',
+                'success': False,
+                'error': str(e)
+            })
+        
+        # Step 4: Test the repaired table
+        try:
+            result = db_service.execute_query("SELECT COUNT(*) as count FROM user_progress")
+            repair_info['operations'].append({
+                'step': 'test_table',
+                'success': True,
+                'message': f'Table test successful, count: {result[0]["count"] if result else 0}'
+            })
+        except Exception as e:
+            repair_info['operations'].append({
+                'step': 'test_table',
+                'success': False,
+                'error': str(e)
+            })
+        
+        # Step 5: Test insert
+        try:
+            test_user_id = 'test_user_repair'
+            db_service.execute_update(
+                "INSERT OR REPLACE INTO user_progress (user_id, level, experience_points, total_experience, created_at) VALUES (?, ?, 0, 0, ?)",
+                (test_user_id, 1, datetime.now().isoformat())
+            )
+            repair_info['operations'].append({
+                'step': 'test_insert',
+                'success': True,
+                'message': 'Test insert successful'
+            })
+            
+            # Clean up test data
+            db_service.execute_update("DELETE FROM user_progress WHERE user_id = ?", (test_user_id,))
+            
+        except Exception as e:
+            repair_info['operations'].append({
+                'step': 'test_insert',
+                'success': False,
+                'error': str(e)
+            })
+        
+        repair_info['overall_success'] = all(op.get('success', False) for op in repair_info['operations'])
+        
+    except Exception as e:
+        repair_info['overall_error'] = str(e)
+        repair_info['overall_success'] = False
+    
+    return jsonify(repair_info)
+
+# Debug endpoint for database repair
 @app.route('/api/debug/chrome')
 def debug_chrome():
     """Debug endpoint to check Chrome installation status"""
