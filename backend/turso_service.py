@@ -47,26 +47,43 @@ class TursoService:
         try:
             logger.info("Creating Turso client...")
             
-            # Try creating client with sync mode
+            # Try different client creation approaches
+            import asyncio
+            
+            # Method 1: Try creating sync client if available
             try:
-                self.client = libsql_client.create_client_sync(
-                    url=self.database_url,
-                    auth_token=self.auth_token
-                )
-                logger.info("✅ Created Turso sync client")
-            except AttributeError:
-                # Fallback to regular client if sync version doesn't exist
-                logger.info("Sync client not available, trying regular client...")
+                if hasattr(libsql_client, 'create_client_sync'):
+                    self.client = libsql_client.create_client_sync(
+                        url=self.database_url,
+                        auth_token=self.auth_token
+                    )
+                    logger.info("✅ Created Turso sync client")
+                else:
+                    raise AttributeError("sync client not available")
+            except (AttributeError, Exception) as sync_error:
+                logger.info(f"Sync client failed: {sync_error}, trying regular client...")
+                
+                # Method 2: Create event loop if none exists
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    # No event loop, create one
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    logger.info("Created new event loop for Turso")
+                
+                # Method 3: Create regular client with event loop
                 self.client = libsql_client.create_client(
                     url=self.database_url,
                     auth_token=self.auth_token
                 )
-                logger.info("✅ Created Turso regular client")
+                logger.info("✅ Created Turso regular client with event loop")
             
             # Test the connection with a simple query
             try:
                 result = self.client.execute("SELECT 1")
                 logger.info("✅ Connected to Turso database successfully")
+                logger.info(f"Query result: {result}")
                 return True
             except Exception as test_error:
                 logger.warning(f"Turso connection test failed: {test_error}")

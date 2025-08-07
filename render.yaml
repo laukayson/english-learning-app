@@ -5,21 +5,29 @@ services:
     env: python
     plan: free
     buildCommand: |
-      # Update package lists
-      apt-get update
-      # Install Chromium instead of Chrome (more reliable on Ubuntu/Debian)
-      apt-get install -y chromium-browser chromium-chromedriver
-      # Verify Chromium installation
-      which chromium-browser
-      chromium-browser --version
-      # Create Chrome compatibility symlinks
-      ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome-stable
-      ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome
-      ln -sf /usr/bin/chromium-browser /usr/local/bin/google-chrome
-      # Verify symlinks
-      which google-chrome-stable
-      which google-chrome
-      google-chrome --version
+      # Update package lists with error checking
+      apt-get update || echo "apt-get update failed"
+      # Install Chromium with verbose output
+      apt-get install -y chromium-browser chromium-chromedriver || echo "chromium install failed"
+      # Check what was actually installed
+      dpkg -l | grep chromium || echo "no chromium packages found"
+      # Manual verification
+      ls -la /usr/bin/chromium* || echo "no chromium binaries in /usr/bin"
+      ls -la /usr/bin/google-chrome* || echo "no chrome binaries in /usr/bin"
+      # Try installing without chromium-chromedriver if main package fails
+      apt-get install -y chromium-browser || echo "basic chromium install failed"
+      # Create Chrome compatibility symlinks if chromium exists
+      if [ -f /usr/bin/chromium-browser ]; then
+        ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome-stable
+        ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome
+        ln -sf /usr/bin/chromium-browser /usr/local/bin/google-chrome
+        echo "Chromium symlinks created"
+      else
+        echo "Chromium not found, cannot create symlinks"
+      fi
+      # Final verification
+      which chromium-browser || echo "chromium-browser not in PATH"
+      which google-chrome || echo "google-chrome not in PATH"
       # Install Python dependencies
       pip install -r requirements.txt
     startCommand: python backend/app.py
