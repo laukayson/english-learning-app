@@ -497,32 +497,55 @@ def register_user():
         return jsonify({'error': 'Level must be a valid number'}), 400
     
     # Check if username already exists
-    existing_user = db_service.get_user_by_username(username)
-    if existing_user:
-        return jsonify({'error': 'Username already exists'}), 409
+    try:
+        existing_user = db_service.get_user_by_username(username)
+        if existing_user:
+            return jsonify({'error': 'Username already exists'}), 409
+    except Exception as e:
+        logger.error(f"Error checking existing user: {e}")
+        return jsonify({'error': 'Database error during user check'}), 500
     
     # Create new user
     user_id = f"user_{int(time.time() * 1000)}"
     hashed_password = hash_password(password)
     
     # Create user in database
-    success = db_service.create_user(user_id, username, hashed_password, data['name'], age, level)
-    
-    if success:
-        # Initialize user progress
-        progress_tracker.initialize_user_progress(user_id, level)
+    try:
+        success = db_service.create_user(user_id, username, hashed_password, data['name'], age, level)
+        logger.info(f"Database create_user result: {success}")
         
+        if not success:
+            logger.error("Database create_user returned False")
+            return jsonify({'error': 'Failed to create user in database'}), 500
+        
+        # Verify user was created by trying to retrieve it
+        try:
+            created_user = db_service.get_user_by_username(username)
+            if created_user:
+                logger.info(f"User verification successful: {created_user['username']}")
+            else:
+                logger.error("User verification failed - user not found after creation")
+                return jsonify({'error': 'User creation verification failed'}), 500
+        except Exception as verify_error:
+            logger.error(f"Error verifying user creation: {verify_error}")
+        
+        # Initialize user progress
+        try:
+            db_service.initialize_user_progress(user_id, level)
+            logger.info(f"User progress initialized for {username}")
+        except Exception as progress_error:
+            logger.warning(f"Failed to initialize user progress: {progress_error}")
+        
+        logger.info(f"✅ User registered successfully: {username}")
         return jsonify({
-            'success': True,
+            'message': 'User registered successfully',
             'user_id': user_id,
-            'username': username,
-            'name': data['name'],
-            'age': age,
-            'level': level,
-            'message': 'User registered successfully'
-        })
-    else:
-        return jsonify({'error': 'Failed to create user'}), 500
+            'username': username
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"Error creating user in database: {e}")
+        return jsonify({'error': 'Database error during user creation'}), 500
 
 # User login endpoint (same as before)
 @app.route('/api/user/login', methods=['POST'])
