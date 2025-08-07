@@ -217,26 +217,49 @@ class TursoService:
                 if hasattr(result, 'columns') and hasattr(result, 'rows'):
                     try:
                         # Extract column names - handle different column formats
-                        if hasattr(result.columns, '__iter__') and result.columns:
-                            # Check if columns have .name attribute
-                            if hasattr(result.columns[0], 'name'):
-                                columns = [col.name for col in result.columns]
-                            elif isinstance(result.columns[0], str):
-                                columns = list(result.columns)
-                            else:
-                                # Fallback: use string representation
-                                columns = [str(col) for col in result.columns]
-                        else:
-                            columns = []
+                        columns = []
+                        if hasattr(result, 'columns') and result.columns:
+                            logger.debug(f"Raw columns: {result.columns}")
+                            logger.debug(f"Columns type: {type(result.columns)}")
+                            
+                            # Handle different column formats
+                            try:
+                                # Try to iterate over columns
+                                for i, col in enumerate(result.columns):
+                                    logger.debug(f"Column {i}: {col} (type: {type(col)})")
+                                    
+                                    # Check different ways to get column name
+                                    if isinstance(col, str):
+                                        columns.append(col)
+                                    elif hasattr(col, 'name'):
+                                        columns.append(col.name)
+                                    elif hasattr(col, '__str__'):
+                                        columns.append(str(col))
+                                    else:
+                                        columns.append(f"col_{i}")
+                                        
+                            except Exception as col_error:
+                                logger.warning(f"Column iteration failed: {col_error}")
+                                # Fallback: try direct conversion
+                                try:
+                                    columns = list(result.columns)
+                                except:
+                                    columns = []
                         
                         # Extract rows data
-                        if hasattr(result.rows, '__iter__'):
-                            rows = list(result.rows)
-                        else:
-                            rows = []
+                        rows = []
+                        if hasattr(result, 'rows') and result.rows:
+                            logger.debug(f"Raw rows: {result.rows}")
+                            logger.debug(f"Rows type: {type(result.rows)}")
+                            try:
+                                rows = list(result.rows)
+                                logger.debug(f"Converted rows: {rows}")
+                            except Exception as row_error:
+                                logger.warning(f"Row conversion failed: {row_error}")
+                                rows = []
                         
-                        logger.debug(f"Extracted columns: {columns}")
-                        logger.debug(f"Extracted rows count: {len(rows)}")
+                        logger.debug(f"Final columns: {columns}")
+                        logger.debug(f"Final rows count: {len(rows)}")
                         
                         # Create result dictionaries
                         if columns and rows:
