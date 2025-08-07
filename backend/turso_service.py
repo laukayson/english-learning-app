@@ -13,8 +13,8 @@ except ImportError:
     TURSO_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
-# Temporarily set to DEBUG to see result structure
-logger.setLevel(logging.INFO)
+# Temporarily set to DEBUG to see exact error
+logger.setLevel(logging.DEBUG)
 
 class TursoService:
     """Database service that works with both Turso (production) and SQLite (development)"""
@@ -207,54 +207,63 @@ class TursoService:
         """Execute a query and return results"""
         try:
             if self.is_turso:
-                if params:
-                    result = self.client.execute(query, params)
-                else:
-                    result = self.client.execute(query)
-                
-                # Handle libsql_client.result.ResultSet from sync client
-                if hasattr(result, 'columns') and hasattr(result, 'rows'):
-                    try:
-                        # Extract column names - handle different column formats
-                        columns = []
-                        if result.columns:
-                            # Columns are typically a tuple of strings
-                            columns = list(result.columns)
-                        
-                        # Extract rows data
-                        rows = []
-                        if result.rows:
-                            rows = list(result.rows)
-                        
-                        # Create result dictionaries
-                        if columns and rows:
-                            return [dict(zip(columns, row)) for row in rows]
-                        elif rows:
-                            # No column names, use numeric indices
-                            return [dict(enumerate(row)) for row in rows]
-                        else:
-                            return []
-                            
-                    except Exception as parse_error:
-                        logger.warning(f"Error parsing Turso result: {parse_error}")
-                        logger.warning(f"Result type: {type(result)}")
-                        logger.warning(f"Columns type: {type(getattr(result, 'columns', None))}")
-                        logger.warning(f"Rows type: {type(getattr(result, 'rows', None))}")
-                        return []
-                
-                # Handle other possible result formats
-                elif hasattr(result, 'fetchall'):
-                    rows = result.fetchall()
-                    if hasattr(result, 'description') and result.description:
-                        columns = [desc[0] for desc in result.description]
-                        return [dict(zip(columns, row)) for row in rows]
+                try:
+                    if params:
+                        result = self.client.execute(query, params)
                     else:
-                        return [dict(enumerate(row)) for row in rows]
-                
-                # Last resort: return empty list for unknown formats
-                else:
-                    logger.warning(f"Unknown Turso result format: {type(result)}")
-                    return []
+                        result = self.client.execute(query)
+                    
+                    logger.debug(f"Turso query executed successfully, result type: {type(result)}")
+                    
+                    # Handle libsql_client.result.ResultSet from sync client
+                    if hasattr(result, 'columns') and hasattr(result, 'rows'):
+                        try:
+                            # Extract column names - columns should be a tuple of strings
+                            columns = []
+                            if result.columns:
+                                columns = list(result.columns)
+                                logger.debug(f"Extracted columns: {columns}")
+                            
+                            # Extract rows data
+                            rows = []
+                            if result.rows:
+                                rows = list(result.rows)
+                                logger.debug(f"Extracted {len(rows)} rows")
+                            
+                            # Create result dictionaries
+                            if columns and rows:
+                                final_result = [dict(zip(columns, row)) for row in rows]
+                                logger.debug(f"Created {len(final_result)} result dictionaries")
+                                return final_result
+                            elif rows:
+                                # No column names, use numeric indices
+                                final_result = [dict(enumerate(row)) for row in rows]
+                                logger.debug(f"Created {len(final_result)} numbered result dictionaries")
+                                return final_result
+                            else:
+                                logger.debug("No rows returned")
+                                return []
+                                
+                        except Exception as parse_error:
+                            logger.error(f"Error parsing Turso result: {parse_error}")
+                            logger.error(f"Parse error type: {type(parse_error)}")
+                            logger.error(f"Result type: {type(result)}")
+                            logger.error(f"Result attributes: {dir(result)}")
+                            if hasattr(result, 'columns'):
+                                logger.error(f"Columns: {result.columns}, type: {type(result.columns)}")
+                            if hasattr(result, 'rows'):
+                                logger.error(f"Rows: {result.rows}, type: {type(result.rows)}")
+                            return []
+                    
+                    else:
+                        logger.warning(f"Turso result missing columns/rows attributes: {type(result)}")
+                        logger.warning(f"Available attributes: {dir(result)}")
+                        return []
+                        
+                except Exception as turso_error:
+                    logger.error(f"Turso execution error: {turso_error}")
+                    logger.error(f"Turso error type: {type(turso_error)}")
+                    raise turso_error
                         
             else:
                 # SQLite handling
@@ -276,20 +285,31 @@ class TursoService:
         """Execute an update/insert query"""
         try:
             if self.is_turso:
-                # For updates, we don't need to process the result
-                if params:
-                    self.client.execute(query, params)
-                else:
-                    self.client.execute(query)
-                return True
+                try:
+                    # For updates, we don't need to process the result
+                    if params:
+                        result = self.client.execute(query, params)
+                    else:
+                        result = self.client.execute(query)
+                    
+                    logger.debug(f"Turso update executed successfully, result type: {type(result)}")
+                    return True
+                    
+                except Exception as turso_error:
+                    logger.error(f"Turso update execution error: {turso_error}")
+                    logger.error(f"Turso update error type: {type(turso_error)}")
+                    raise turso_error
+                    
             else:
                 with sqlite3.connect(self.db_path) as conn:
                     cursor = conn.cursor()
                     cursor.execute(query, params)
                     conn.commit()
                     return True
+                    
         except Exception as e:
             logger.error(f"Database update error: {e}")
+            logger.error(f"Update error type: {type(e)}")
             logger.error(f"Query: {query}")
             logger.error(f"Params: {params}")
             return False
