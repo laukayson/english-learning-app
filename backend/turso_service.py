@@ -208,8 +208,14 @@ class TursoService:
         try:
             if self.is_turso:
                 try:
+                    # Execute query with proper parameter handling
+                    logger.debug(f"Executing Turso query: {query[:100]}...")
+                    logger.debug(f"With params: {params}")
+                    
                     if params:
-                        result = self.client.execute(query, params)
+                        # Convert tuple to list for libsql_client
+                        params_list = list(params) if isinstance(params, tuple) else params
+                        result = self.client.execute(query, params_list)
                     else:
                         result = self.client.execute(query)
                     
@@ -263,6 +269,7 @@ class TursoService:
                 except Exception as turso_error:
                     logger.error(f"Turso execution error: {turso_error}")
                     logger.error(f"Turso error type: {type(turso_error)}")
+                    logger.error(f"Turso error args: {turso_error.args if hasattr(turso_error, 'args') else 'No args'}")
                     raise turso_error
                         
             else:
@@ -275,6 +282,8 @@ class TursoService:
                     
         except Exception as e:
             logger.error(f"Database query error: {e}")
+            logger.error(f"Error type: {type(e)}")
+            logger.error(f"Error args: {e.args if hasattr(e, 'args') else 'No args'}")
             logger.error(f"Query: {query}")
             logger.error(f"Params: {params}")
             if self.is_turso:
@@ -286,9 +295,14 @@ class TursoService:
         try:
             if self.is_turso:
                 try:
+                    logger.debug(f"Executing Turso update: {query[:100]}...")
+                    logger.debug(f"With params: {params}")
+                    
                     # For updates, we don't need to process the result
                     if params:
-                        result = self.client.execute(query, params)
+                        # Convert tuple to list for libsql_client
+                        params_list = list(params) if isinstance(params, tuple) else params
+                        result = self.client.execute(query, params_list)
                     else:
                         result = self.client.execute(query)
                     
@@ -298,6 +312,7 @@ class TursoService:
                 except Exception as turso_error:
                     logger.error(f"Turso update execution error: {turso_error}")
                     logger.error(f"Turso update error type: {type(turso_error)}")
+                    logger.error(f"Turso update error args: {turso_error.args if hasattr(turso_error, 'args') else 'No args'}")
                     raise turso_error
                     
             else:
@@ -310,6 +325,7 @@ class TursoService:
         except Exception as e:
             logger.error(f"Database update error: {e}")
             logger.error(f"Update error type: {type(e)}")
+            logger.error(f"Update error args: {e.args if hasattr(e, 'args') else 'No args'}")
             logger.error(f"Query: {query}")
             logger.error(f"Params: {params}")
             return False
