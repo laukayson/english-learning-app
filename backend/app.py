@@ -12,6 +12,10 @@ import time
 import hashlib
 import secrets
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Import configuration (FULL VERSION)
 from config import RENDER_CONFIG, FEATURES, LEVEL_TOPICS, TOPIC_DETAILS, SELENIUM_CONFIG
 
@@ -19,6 +23,7 @@ from config import RENDER_CONFIG, FEATURES, LEVEL_TOPICS, TOPIC_DETAILS, SELENIU
 from turso_service import get_db_service
 from ai_models import AIModels  # Use original AI models (with Selenium support)
 from translation_service import TranslationService
+from conversational_ai import ConversationalAI
 
 # Voice and browser services (ENABLED on Render!)
 try:
@@ -113,6 +118,7 @@ CORS(app)
 db_service = get_db_service()
 ai_models = AIModels()
 translation_service = TranslationService()
+conversational_ai = ConversationalAI()
 progress_tracker = DatabaseProgressTracker(db_service)
 rate_limiter = RateLimiter()
 
@@ -234,6 +240,35 @@ def health_check():
         }
     })
 
+# Chat initialization endpoint
+@app.route('/api/chat/init-topic', methods=['POST'])
+@rate_limit('default')
+@handle_errors
+def init_topic():
+    """Initialize chat topic and return welcome message"""
+    data = request.json
+    topic = data.get('topic', 'general')
+    user_level = data.get('user_level', 'beginner')
+    user_id = data.get('user_id')
+    
+    # Get conversation starter for the topic
+    try:
+        conversation_starter = conversational_ai.get_topic_starter(topic, user_level)
+        
+        return jsonify({
+            'response': conversation_starter,
+            'topic': topic,
+            'user_level': user_level,
+            'session_id': f"session_{user_id}_{topic}_{int(time.time())}" if user_id else None
+        })
+    except Exception as e:
+        logger.error(f"Error initializing topic: {e}")
+        return jsonify({
+            'response': f"Welcome! Let's practice {topic}. How are you today?",
+            'topic': topic,
+            'user_level': user_level
+        })
+
 # Chat endpoint (FULL VERSION with AI)
 @app.route('/api/chat', methods=['POST'])
 @rate_limit('default')
@@ -282,6 +317,22 @@ def chat():
         'farsi_translation': farsi_translation,
         'topic': topic,
         'timestamp': datetime.now().isoformat()
+    })
+
+# Chat session end endpoint
+@app.route('/api/chat/session/end', methods=['POST'])
+@rate_limit('default')
+@handle_errors
+def end_chat_session():
+    """End chat session"""
+    data = request.json
+    session_id = data.get('session_id')
+    user_id = data.get('user_id')
+    
+    # For now, just return success
+    return jsonify({
+        'success': True,
+        'message': 'Session ended successfully'
     })
 
 # STT endpoints (ENABLED on Render!)

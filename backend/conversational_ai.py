@@ -247,16 +247,14 @@ class ConversationalAI:
             if history:
                 self.conversation_history = history
             
-            # Try to use Render selenium client first
+            # Try to use Render selenium client first (if properly configured)
             if self.selenium_client and self.use_selenium:
                 try:
-                    # Use the Render service to send chatbot message
-                    response = self.selenium_client.send_chatbot_message(
-                        message=message,
-                        topic=topic,
-                        history=history,
-                        user_level=user_level
-                    )
+                    # For now, use fallback since we need proper chatbot integration
+                    # This could be enhanced later with actual chatbot automation
+                    logger.info("Selenium client available but using fallback for better reliability")
+                    response = None  # Force fallback
+                    
                     if response and response.strip():
                         # Add this interaction to our conversation history
                         self._update_conversation_history(message, response)
@@ -264,7 +262,7 @@ class ConversationalAI:
                 except Exception as e:
                     logger.warning(f"Render chatbot service failed, falling back to contextual responses: {e}")
             
-            # Fallback to contextual response system
+            # Fallback to contextual response system (primary method for now)
             response = self.generate_contextual_response(message, history)
             
             # Add topic-specific elements if appropriate
@@ -409,6 +407,51 @@ class ConversationalAI:
             'session_start': self.user_context['session_start'].isoformat(),
             'current_topic': self.user_context['current_topic']
         }
+    
+    def get_topic_starter(self, topic: str, user_level: str = 'beginner') -> str:
+        """Get a conversation starter for a specific topic"""
+        topic_starters = {
+            'family': [
+                "Hello! Let's talk about family today. Tell me about your family members!",
+                "Family is so important! How many people are in your family?",
+                "I'd love to hear about your family. Who do you live with?"
+            ],
+            'work': [
+                "Let's discuss work and careers! What kind of work do you do?",
+                "Work is a big part of life. Tell me about your job or studies!",
+                "I'm curious about your work. What does a typical day look like for you?"
+            ],
+            'hobbies': [
+                "Time to talk about hobbies! What do you like to do in your free time?",
+                "Hobbies make life interesting! What activities do you enjoy?",
+                "Let's chat about what you love doing. What are your favorite hobbies?"
+            ],
+            'food': [
+                "Food brings people together! What's your favorite dish?",
+                "Let's talk about food. What do you like to eat?",
+                "I love discussing food! Tell me about your favorite cuisine."
+            ],
+            'travel': [
+                "Travel opens our minds! Have you visited any interesting places?",
+                "Let's explore the world through conversation! Where would you like to travel?",
+                "Travel stories are the best! Tell me about a place you'd love to visit."
+            ],
+            'general': [
+                "Hello! I'm excited to practice English with you today. How are you feeling?",
+                "Welcome! Let's have a great conversation. What would you like to talk about?",
+                "Hi there! Ready to practice English? Tell me how your day is going!"
+            ]
+        }
+        
+        starters = topic_starters.get(topic, topic_starters['general'])
+        import random
+        starter = random.choice(starters)
+        
+        # Adjust for user level
+        if user_level == 'absolute_beginner':
+            starter = "Hello! " + starter.split('!', 1)[-1] if '!' in starter else starter
+        
+        return starter
     
     def __del__(self):
         """Destructor to ensure cleanup"""
