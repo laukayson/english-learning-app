@@ -734,6 +734,40 @@ def api_health_check():
         'database': db_service.health_check()
     })
 
+@app.route('/api/admin/rate-limit-reset', methods=['POST'])
+def reset_rate_limit():
+    """Reset rate limiting for development purposes"""
+    try:
+        data = request.get_json() or {}
+        client_ip = data.get('client_ip') or request.remote_addr
+        
+        # Reset the client's rate limiting data
+        rate_limiter.reset_client(client_ip)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Rate limiting reset for client {client_ip}',
+            'client_ip': client_ip
+        })
+    except Exception as e:
+        logger.error(f"Error resetting rate limit: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/rate-limit-status', methods=['GET'])
+def get_rate_limit_status():
+    """Get current rate limiting status"""
+    try:
+        client_ip = request.remote_addr
+        status = rate_limiter.get_client_status(client_ip)
+        
+        return jsonify({
+            'success': True,
+            'status': status
+        })
+    except Exception as e:
+        logger.error(f"Error getting rate limit status: {e}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     port = RENDER_CONFIG['port']
     host = RENDER_CONFIG['host']
