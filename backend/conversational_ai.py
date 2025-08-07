@@ -169,23 +169,18 @@ class ConversationalAI:
             # Generate unique session ID
             self.user_context['session_id'] = str(uuid.uuid4())
             
-            # Initialize the original selenium chatbot with proper settings
+            # Create the selenium chatbot instance but don't initialize yet
             self.selenium_client = SeleniumChatbot(
                 headless=True,  # Run headless on Render
                 timeout=30
             )
             
-            # Try to initialize the chatbot
-            if self.selenium_client.initialize():
-                self.session_active = True
-                logger.info(f"✅ Original Selenium chatbot service initialized (session: {self.user_context['session_id']})")
-            else:
-                logger.warning("Original Selenium chatbot initialization failed")
-                self.selenium_client = None
-                self.session_active = False
+            # Don't initialize during startup - do it lazily when first needed
+            self.session_active = False
+            logger.info(f"🤖 Selenium chatbot created (session: {self.user_context['session_id']}) - will initialize on first use")
                 
         except Exception as e:
-            logger.error(f"Failed to initialize original Selenium chatbot service: {str(e)}")
+            logger.error(f"Failed to create Selenium chatbot service: {str(e)}")
             self.selenium_client = None
             self.session_active = False
     
@@ -280,19 +275,32 @@ class ConversationalAI:
             # Use Selenium chatbot for actual AI responses
             if self.selenium_client and self.use_selenium:
                 try:
-                    # Use the selenium chatbot implementation
-                    response = self.selenium_client.get_response(
-                        message=message,
-                        topic=topic,
-                        history=history,
-                        user_level=user_level
-                    )
-                    if response and response.strip():
-                        # Add this interaction to our conversation history
-                        self._update_conversation_history(message, response)
-                        return response
+                    # Initialize selenium chatbot lazily on first use
+                    if not self.session_active:
+                        logger.info("Initializing selenium chatbot on first use...")
+                        if self.selenium_client.initialize():
+                            self.session_active = True
+                            logger.info("✅ Selenium chatbot initialized successfully")
+                        else:
+                            logger.warning("❌ Selenium chatbot initialization failed")
+                            self.selenium_client = None
+                            self.session_active = False
+                    
+                    # Use the selenium chatbot implementation if active
+                    if self.session_active:
+                        response = self.selenium_client.get_response(
+                            message=message,
+                            topic=topic,
+                            history=history,
+                            user_level=user_level
+                        )
+                        if response and response.strip():
+                            # Add this interaction to our conversation history
+                            self._update_conversation_history(message, response)
+                            return response
                 except Exception as e:
                     logger.warning(f"Selenium chatbot service failed: {e}")
+                    self.session_active = False
             
             # Only use fallback if selenium explicitly fails
             logger.info("Using contextual response fallback")

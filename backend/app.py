@@ -136,12 +136,10 @@ if VOICE_AVAILABLE and FEATURES['voice_features']:
 if WEB_STT_AVAILABLE and FEATURES['web_stt']:
     try:
         web_stt_service = get_web_stt_service()
-        # Initialize with headless mode for Render
-        if os.environ.get('RENDER'):
-            web_stt_service.initialize(headless=True)
-        logger.info("✅ Web STT service initialized")
+        # Don't initialize during startup - do it lazily when first needed
+        logger.info("✅ Web STT service created (will initialize on first use)")
     except Exception as e:
-        logger.warning(f"Web STT service initialization failed: {e}")
+        logger.warning(f"Web STT service creation failed: {e}")
 
 # Global conversational AI instance
 conversation_ai = None
@@ -234,7 +232,7 @@ def health_check():
             'ai_models': ai_models.is_ready(),
             'translation': translation_service.is_ready(),
             'voice': voice_service.is_ready() if voice_service else False,
-            'web_stt': web_stt_service.is_ready() if web_stt_service else False,
+            'web_stt': web_stt_service is not None,  # Don't call is_ready() until initialized
             'conversation_ai': conversation_ai is not None,
             'database': True
         }
@@ -372,6 +370,21 @@ def start_stt_recording():
             'message': 'Voice recording simulated (STT service not available)',
             'recording': True
         })
+    
+    # Initialize STT service lazily on first use
+    if not web_stt_service.is_initialized:
+        logger.info("Initializing Web STT service on first use...")
+        try:
+            if os.environ.get('RENDER'):
+                web_stt_service.initialize(headless=True)
+            else:
+                web_stt_service.initialize(headless=False)
+        except Exception as e:
+            logger.error(f"STT initialization failed: {e}")
+            return jsonify({
+                'success': False,
+                'error': 'STT service initialization failed'
+            })
     
     data = request.get_json() or {}
     language = data.get('language', 'en')
