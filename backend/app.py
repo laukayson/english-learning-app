@@ -494,6 +494,81 @@ def login_user():
         'last_active': user.get('last_active')
     })
 
+# User verification endpoint
+@app.route('/api/user/verify', methods=['POST'])
+@rate_limit('default')
+@handle_errors
+def verify_user():
+    """Verify if a user exists"""
+    data = request.get_json()
+    
+    if 'username' not in data:
+        return jsonify({'error': 'Username is required'}), 400
+    
+    username = data['username'].strip()
+    user = db_service.get_user_by_username(username)
+    
+    if user:
+        return jsonify({'exists': True, 'user_id': user['id']})
+    else:
+        return jsonify({'exists': False})
+
+# User level info endpoint
+@app.route('/api/user-level-info/<user_id>', methods=['GET'])
+@rate_limit('default')
+@handle_errors
+def get_user_level_info(user_id):
+    """Get user level and progress information"""
+    try:
+        user = db_service.get_user_by_id(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        progress = db_service.get_user_progress(user_id)
+        
+        return jsonify({
+            'user_id': user['id'],
+            'level': user['level'],
+            'level_name': f"Level {user['level']}",
+            'experience_points': progress.get('experience_points', 0),
+            'topics_completed': progress.get('topics_completed', []),
+            'practice_sessions': progress.get('practice_sessions', 0)
+        })
+    except Exception as e:
+        logger.error(f"Error getting user level info: {e}")
+        return jsonify({'error': 'Failed to get user info'}), 500
+
+# Login tracking endpoint
+@app.route('/api/track-login', methods=['POST'])
+@rate_limit('default')
+@handle_errors
+def track_login():
+    """Track user login for daily bonus"""
+    data = request.get_json()
+    
+    if 'user_id' not in data:
+        return jsonify({'error': 'User ID is required'}), 400
+    
+    user_id = data['user_id']
+    
+    # For now, just return success - implement actual tracking later
+    return jsonify({
+        'success': True,
+        'first_login_today': True,
+        'bonus_xp': 10
+    })
+
+# Message tracking endpoint
+@app.route('/api/track-message', methods=['POST'])
+@rate_limit('default')
+@handle_errors
+def track_message():
+    """Track message for progress"""
+    data = request.get_json()
+    
+    # For now, just return success - implement actual tracking later
+    return jsonify({'success': True})
+
 # Translation endpoint (same as before)
 @app.route('/api/translate', methods=['POST'])
 @rate_limit('default')

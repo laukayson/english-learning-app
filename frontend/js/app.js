@@ -296,28 +296,18 @@ class App {
 
     async registerUser(userData) {
         try {
-            // Map frontend level numbers to backend level strings
-            const levelMap = {
-                1: 'absolute_beginner',
-                2: 'beginner', 
-                3: 'intermediate',
-                4: 'advanced'
-            };
-
-            // Call backend API to register user
-            const response = await fetch('/api/user', {
+            // Call backend API to register user with correct field names
+            const response = await fetch('/api/user/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    action: 'create',
                     username: userData.username,
                     password: userData.password,
-                    confirmPassword: userData.password, // Same as password since frontend already validated
-                    displayName: userData.name, // Map frontend 'name' to backend 'displayName'
+                    name: userData.name, // Backend expects 'name', not 'displayName'
                     age: userData.age,
-                    learningLevel: levelMap[userData.level] || 'beginner' // Map numeric level to string
+                    level: userData.level // Backend expects numeric level, not string
                 })
             });
             
@@ -353,13 +343,12 @@ class App {
     async loginUser(username, password) {
         try {
             // Call backend API to login user
-            const response = await fetch('/api/user', {
+            const response = await fetch('/api/user/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ 
-                    action: 'login',
                     username: username, 
                     password: password 
                 })
@@ -372,16 +361,16 @@ class App {
 
             const result = await response.json();
             
-            // Create user object with API response
+            // Create user object with API response data
             const user = {
                 id: result.user_id,
                 user_id: result.user_id,
-                username: username,  // Use the username from login form
-                name: username,      // Use username as display name for now
-                age: 25,            // Default age
-                level: 1,           // Default level
-                created_at: new Date().toISOString(),
-                settings: storage.getSettings()
+                username: result.username,
+                name: result.name,
+                age: result.age,
+                level: result.level,
+                settings: result.settings || {},
+                last_active: result.last_active
             };
 
             Utils.log('User logged in successfully', user);
