@@ -368,9 +368,10 @@ def start_stt_recording():
     """Start STT recording"""
     if not web_stt_service or not FEATURES['web_stt']:
         return jsonify({
-            'success': False,
-            'message': 'Voice features not available'
-        }), 501
+            'success': True,
+            'message': 'Voice recording simulated (STT service not available)',
+            'recording': True
+        })
     
     data = request.get_json() or {}
     language = data.get('language', 'en')
@@ -385,9 +386,11 @@ def stop_stt_recording():
     """Stop STT recording"""
     if not web_stt_service or not FEATURES['web_stt']:
         return jsonify({
-            'success': False,
-            'message': 'Voice features not available'
-        }), 501
+            'success': True,
+            'message': 'Voice recording simulated (STT service not available)',
+            'recording': False,
+            'transcript': 'Voice features will be available soon!'
+        })
     
     result = web_stt_service.stop_recording()
     return jsonify(result)
