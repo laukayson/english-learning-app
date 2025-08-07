@@ -238,6 +238,67 @@ def health_check():
         }
     })
 
+@app.route('/api/chrome-status', methods=['GET'])
+def chrome_status():
+    """Check Chrome installation status"""
+    import shutil
+    import os
+    import subprocess
+    
+    status = {
+        'timestamp': datetime.now().isoformat(),
+        'chrome_binaries': {},
+        'environment_vars': {},
+        'chrome_version': None,
+        'chromedriver_available': False
+    }
+    
+    # Check environment variables
+    for env_var in ['GOOGLE_CHROME_BIN', 'CHROMEDRIVER_PATH']:
+        status['environment_vars'][env_var] = os.environ.get(env_var, 'Not set')
+    
+    # Check for Chrome binaries
+    chrome_names = ['google-chrome-stable', 'google-chrome', 'chromium-browser', 'chromium']
+    for name in chrome_names:
+        binary_path = shutil.which(name)
+        status['chrome_binaries'][name] = binary_path or 'Not found'
+    
+    # Check specific paths
+    chrome_paths = [
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/google-chrome',
+        '/usr/bin/chromium-browser',
+        '/opt/google/chrome/chrome'
+    ]
+    
+    for path in chrome_paths:
+        if os.path.exists(path):
+            status['chrome_binaries'][f'path_{path}'] = 'Found'
+        else:
+            status['chrome_binaries'][f'path_{path}'] = 'Not found'
+    
+    # Try to get Chrome version
+    for binary in ['google-chrome-stable', 'google-chrome']:
+        try:
+            result = subprocess.run([binary, '--version'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                status['chrome_version'] = result.stdout.strip()
+                break
+        except:
+            continue
+    
+    # Check if chromedriver is available
+    try:
+        from webdriver_manager.chrome import ChromeDriverManager
+        chromedriver_path = ChromeDriverManager().install()
+        status['chromedriver_available'] = True
+        status['chromedriver_path'] = chromedriver_path
+    except Exception as e:
+        status['chromedriver_error'] = str(e)
+    
+    return jsonify(status)
+
 # Chat initialization endpoint
 @app.route('/api/chat/init-topic', methods=['POST'])
 @rate_limit('default')

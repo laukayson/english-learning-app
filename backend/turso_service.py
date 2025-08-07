@@ -35,30 +35,17 @@ class TursoService:
     def _init_turso(self):
         """Initialize Turso client"""
         try:
-            # Handle event loop issues for Turso client
-            import asyncio
-            import threading
+            logger.info("Creating Turso client...")
             
-            # Check if we're in an async context
-            try:
-                loop = asyncio.get_running_loop()
-                logger.info("Found running event loop, using sync client wrapper")
-                # If we're in an async context, we need to be careful
-                self.client = libsql_client.create_client(
-                    url=self.database_url,
-                    auth_token=self.auth_token
-                )
-            except RuntimeError:
-                # No running loop, safe to create client normally
-                logger.info("No running loop, creating Turso client normally")
-                self.client = libsql_client.create_client(
-                    url=self.database_url,
-                    auth_token=self.auth_token
-                )
+            # Simple client creation without async handling
+            self.client = libsql_client.create_client(
+                url=self.database_url,
+                auth_token=self.auth_token
+            )
             
             # Test the connection with a simple query
             try:
-                self.client.execute("SELECT 1")
+                result = self.client.execute("SELECT 1")
                 logger.info("✅ Connected to Turso database")
             except Exception as test_error:
                 logger.warning(f"Turso connection test failed: {test_error}")
