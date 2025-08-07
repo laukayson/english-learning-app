@@ -206,7 +206,31 @@ class TursoService:
         try:
             if self.is_turso:
                 result = self.client.execute(query, params)
-                return [dict(zip([col.name for col in result.columns], row)) for row in result.rows]
+                
+                # Handle different result formats from sync vs async clients
+                if hasattr(result, 'columns') and hasattr(result, 'rows'):
+                    # Standard async client format
+                    return [dict(zip([col.name for col in result.columns], row)) for row in result.rows]
+                elif hasattr(result, 'fetchall'):
+                    # Sync client might return cursor-like object
+                    rows = result.fetchall()
+                    # Get column names if available
+                    if hasattr(result, 'description'):
+                        columns = [desc[0] for desc in result.description]
+                        return [dict(zip(columns, row)) for row in rows]
+                    else:
+                        # Fallback: return as list of tuples converted to dict with numeric keys
+                        return [dict(enumerate(row)) for row in rows]
+                else:
+                    # Handle other result formats
+                    logger.warning(f"Unexpected result format from Turso: {type(result)}")
+                    logger.warning(f"Result attributes: {dir(result)}")
+                    
+                    # Try to convert to list if possible
+                    if hasattr(result, '__iter__'):
+                        return [{'result': str(item)} for item in result]
+                    else:
+                        return [{'result': str(result)}]
             else:
                 with sqlite3.connect(self.db_path) as conn:
                     conn.row_factory = sqlite3.Row
@@ -215,6 +239,8 @@ class TursoService:
                     return [dict(row) for row in cursor.fetchall()]
         except Exception as e:
             logger.error(f"Database query error: {e}")
+            logger.error(f"Query: {query}")
+            logger.error(f"Params: {params}")
             return []
     
     def execute_update(self, query: str, params: tuple = ()) -> bool:
