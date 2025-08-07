@@ -62,8 +62,18 @@ class TursoService:
             logger.info(f"Database URL: {self.database_url[:50]}...")
             logger.info(f"Auth token length: {len(self.auth_token) if self.auth_token else 0}")
             
-            # Try different client creation approaches, prioritizing HTTP
+            # Ensure we have an event loop for async operations
             import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+                logger.info("Using existing event loop")
+            except RuntimeError:
+                # No event loop, create one
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                logger.info("Created new event loop for Turso")
+            
+            # Try different client creation approaches, prioritizing HTTP
             
             # Method 1: If already HTTPS, use directly
             if self.database_url.startswith('https://'):
@@ -106,17 +116,7 @@ class TursoService:
                     except (AttributeError, Exception) as sync_error:
                         logger.warning(f"Sync client failed: {sync_error}")
                         
-                        # Method 4: Create event loop and try regular WebSocket client
-                        try:
-                            loop = asyncio.get_event_loop()
-                            logger.info("Using existing event loop")
-                        except RuntimeError:
-                            # No event loop, create one
-                            loop = asyncio.new_event_loop()
-                            asyncio.set_event_loop(loop)
-                            logger.info("Created new event loop for Turso")
-                        
-                        # Final attempt with WebSocket
+                        # Method 4: Final attempt with WebSocket
                         self.client = libsql_client.create_client(
                             url=self.database_url,
                             auth_token=self.auth_token
