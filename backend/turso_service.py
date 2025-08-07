@@ -62,66 +62,82 @@ class TursoService:
             logger.info(f"Database URL: {self.database_url[:50]}...")
             logger.info(f"Auth token length: {len(self.auth_token) if self.auth_token else 0}")
             
-            # Ensure we have an event loop for async operations
+            # Ensure we have a proper event loop for async operations
             import asyncio
+            import threading
+            
+            # Check if we're in the main thread
+            is_main_thread = threading.current_thread() is threading.main_thread()
+            logger.info(f"Running in main thread: {is_main_thread}")
+            
             try:
-                loop = asyncio.get_event_loop()
-                logger.info("Using existing event loop")
+                # Try to get the current event loop
+                loop = asyncio.get_running_loop()
+                logger.info("Found running event loop")
             except RuntimeError:
-                # No event loop, create one
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                logger.info("Created new event loop for Turso")
-            
-            # Try different client creation approaches, prioritizing HTTP
-            
-            # Method 1: If already HTTPS, use directly
-            if self.database_url.startswith('https://'):
                 try:
-                    logger.info("Using HTTPS URL directly...")
-                    self.client = libsql_client.create_client(
+                    # No running loop, try to get the event loop for current thread
+                    loop = asyncio.get_event_loop()
+                    logger.info("Using existing event loop")
+                except RuntimeError:
+                    # No event loop exists, create a new one
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    logger.info("Created new event loop for Turso")
+            
+            # For Flask/sync context, we need to use sync methods if available
+            # Method 1: Try sync client first (best for Flask)
+            try:
+                if hasattr(libsql_client, 'create_client_sync'):
+                    logger.info("Attempting sync client creation...")
+                    self.client = libsql_client.create_client_sync(
                         url=self.database_url,
                         auth_token=self.auth_token
                     )
-                    logger.info("✅ Created Turso client with HTTPS URL")
-                except Exception as https_error:
-                    logger.warning(f"HTTPS client failed: {https_error}")
-                    raise https_error
-            
-            # Method 2: Convert libsql:// to HTTPS and try HTTP-based connection
-            elif self.database_url.startswith('libsql://'):
-                try:
-                    # Convert WebSocket URL to HTTP
-                    http_url = self.database_url.replace('libsql://', 'https://')
-                    logger.info(f"Converting to HTTPS URL: {http_url[:50]}...")
+                    logger.info("✅ Created Turso sync client")
+                else:
+                    raise AttributeError("sync client not available")
                     
-                    self.client = libsql_client.create_client(
-                        url=http_url,
-                        auth_token=self.auth_token
-                    )
-                    logger.info("✅ Created Turso client with converted HTTPS URL")
-                except Exception as convert_error:
-                    logger.warning(f"HTTPS conversion failed: {convert_error}")
-                    
-                    # Method 3: Try sync client with original WebSocket URL
+            except (AttributeError, Exception) as sync_error:
+                logger.info(f"Sync client failed: {sync_error}, trying async client...")
+                
+                # Method 2: If already HTTPS, use async client with proper event loop
+                if self.database_url.startswith('https://'):
                     try:
-                        if hasattr(libsql_client, 'create_client_sync'):
-                            self.client = libsql_client.create_client_sync(
-                                url=self.database_url,
-                                auth_token=self.auth_token
-                            )
-                            logger.info("✅ Created Turso sync client")
-                        else:
-                            raise AttributeError("sync client not available")
-                    except (AttributeError, Exception) as sync_error:
-                        logger.warning(f"Sync client failed: {sync_error}")
+                        logger.info("Using HTTPS URL with async client...")
                         
-                        # Method 4: Final attempt with WebSocket
+                        # Ensure the event loop is set for the current thread
+                        if not loop.is_running():
+                            asyncio.set_event_loop(loop)
+                        
                         self.client = libsql_client.create_client(
                             url=self.database_url,
                             auth_token=self.auth_token
                         )
-                        logger.info("✅ Created Turso regular client with event loop")
+                        logger.info("✅ Created Turso async client with HTTPS URL")
+                    except Exception as https_error:
+                        logger.warning(f"HTTPS async client failed: {https_error}")
+                        raise https_error
+                
+                # Method 3: Convert libsql:// to HTTPS and try async client
+                elif self.database_url.startswith('libsql://'):
+                    try:
+                        # Convert WebSocket URL to HTTP
+                        http_url = self.database_url.replace('libsql://', 'https://')
+                        logger.info(f"Converting to HTTPS URL: {http_url[:50]}...")
+                        
+                        # Ensure the event loop is set for the current thread
+                        if not loop.is_running():
+                            asyncio.set_event_loop(loop)
+                        
+                        self.client = libsql_client.create_client(
+                            url=http_url,
+                            auth_token=self.auth_token
+                        )
+                        logger.info("✅ Created Turso async client with converted HTTPS URL")
+                    except Exception as convert_error:
+                        logger.warning(f"HTTPS conversion failed: {convert_error}")
+                        raise convert_error
             
             # Test the connection with a simple query
             try:
@@ -149,8 +165,8 @@ class TursoService:
             logger.error(f"Error details: {str(e)}")
             
             # For deployment, we'll fall back to SQLite
-            logger.warning("🔄 Falling back to SQLite - Use HTTPS URL format to resolve Turso connection")
-            logger.warning("Change TURSO_DATABASE_URL from libsql:// to https:// format in Render environment")
+            logger.warning("🔄 Falling back to SQLite - Event loop configuration issue")
+            logger.warning("This is likely due to Flask/async context incompatibility")
             self._fallback_to_sqlite()
             return False
     
