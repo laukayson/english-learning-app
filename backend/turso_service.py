@@ -217,37 +217,14 @@ class TursoService:
                     try:
                         # Extract column names - handle different column formats
                         columns = []
-                        if hasattr(result, 'columns') and result.columns:
-                            # Handle different column formats
-                            try:
-                                # Try to iterate over columns
-                                for i, col in enumerate(result.columns):
-                                    # Check different ways to get column name
-                                    if isinstance(col, str):
-                                        columns.append(col)
-                                    elif hasattr(col, 'name'):
-                                        columns.append(col.name)
-                                    elif hasattr(col, '__str__'):
-                                        columns.append(str(col))
-                                    else:
-                                        columns.append(f"col_{i}")
-                                        
-                            except Exception as col_error:
-                                logger.warning(f"Column iteration failed: {col_error}")
-                                # Fallback: try direct conversion
-                                try:
-                                    columns = list(result.columns)
-                                except:
-                                    columns = []
+                        if result.columns:
+                            # Columns are typically a tuple of strings
+                            columns = list(result.columns)
                         
                         # Extract rows data
                         rows = []
-                        if hasattr(result, 'rows') and result.rows:
-                            try:
-                                rows = list(result.rows)
-                            except Exception as row_error:
-                                logger.warning(f"Row conversion failed: {row_error}")
-                                rows = []
+                        if result.rows:
+                            rows = list(result.rows)
                         
                         # Create result dictionaries
                         if columns and rows:
@@ -259,15 +236,11 @@ class TursoService:
                             return []
                             
                     except Exception as parse_error:
-                        logger.warning(f"Error parsing columns/rows: {parse_error}")
-                        # Fallback parsing
-                        try:
-                            # Try to convert result to string and parse
-                            result_str = str(result)
-                            logger.debug(f"Result string representation: {result_str}")
-                            return [{'raw_result': result_str}]
-                        except:
-                            return []
+                        logger.warning(f"Error parsing Turso result: {parse_error}")
+                        logger.warning(f"Result type: {type(result)}")
+                        logger.warning(f"Columns type: {type(getattr(result, 'columns', None))}")
+                        logger.warning(f"Rows type: {type(getattr(result, 'rows', None))}")
+                        return []
                 
                 # Handle other possible result formats
                 elif hasattr(result, 'fetchall'):
@@ -278,16 +251,10 @@ class TursoService:
                     else:
                         return [dict(enumerate(row)) for row in rows]
                 
-                # Last resort: try to iterate over result directly
+                # Last resort: return empty list for unknown formats
                 else:
-                    logger.warning(f"Unknown result format: {type(result)}")
-                    try:
-                        if hasattr(result, '__iter__'):
-                            return [{'result': str(item)} for item in result]
-                        else:
-                            return [{'result': str(result)}]
-                    except:
-                        return []
+                    logger.warning(f"Unknown Turso result format: {type(result)}")
+                    return []
                         
             else:
                 # SQLite handling
@@ -309,7 +276,11 @@ class TursoService:
         """Execute an update/insert query"""
         try:
             if self.is_turso:
-                self.client.execute(query, params)
+                # For updates, we don't need to process the result
+                if params:
+                    self.client.execute(query, params)
+                else:
+                    self.client.execute(query)
                 return True
             else:
                 with sqlite3.connect(self.db_path) as conn:
@@ -319,6 +290,8 @@ class TursoService:
                     return True
         except Exception as e:
             logger.error(f"Database update error: {e}")
+            logger.error(f"Query: {query}")
+            logger.error(f"Params: {params}")
             return False
     
     def _create_tables(self):
