@@ -14,7 +14,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 # Temporarily set to DEBUG to see result structure
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 class TursoService:
     """Database service that works with both Turso (production) and SQLite (development)"""
