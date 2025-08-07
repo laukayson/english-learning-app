@@ -483,39 +483,112 @@ class TursoService:
     
     # Progress tracking methods
     def get_user_progress(self, user_id: str) -> Dict:
-        """Get user's learning progress"""
-        query = '''
-            SELECT level, experience_points, total_experience 
-            FROM user_progress 
-            WHERE user_id = ? 
-            LIMIT 1
-        '''
-        results = self.execute_query(query, (user_id,))
-        
-        if results:
-            return results[0]
-        else:
-            # Initialize progress for new user
-            self.initialize_user_progress(user_id, 1)
-            return {'level': 1, 'experience_points': 0, 'total_experience': 0}
+        """Get user's learning progress - with fallback for problematic table"""
+        # Try to get from user_progress table first
+        try:
+            query = '''
+                SELECT level, experience_points, total_experience 
+                FROM user_progress 
+                WHERE user_id = ? 
+                LIMIT 1
+            '''
+            results = self.execute_query(query, (user_id,))
+            
+            if results:
+                return results[0]
+            else:
+                # No existing progress, create default
+                self.initialize_user_progress(user_id, 1)
+                return {'level': 1, 'experience_points': 0, 'total_experience': 0}
+                
+        except Exception as progress_error:
+            logger.warning(f"user_progress table access failed: {progress_error}")
+            # Fallback: store progress in user settings JSON field
+            try:
+                user = self.get_user_by_id(user_id)
+                if user and user.get('settings'):
+                    import json
+                    settings = json.loads(user['settings'])
+                    progress = settings.get('progress', {'level': 1, 'experience_points': 0, 'total_experience': 0})
+                    logger.info(f"Using fallback progress from user settings: {progress}")
+                    return progress
+                else:
+                    # Return default progress
+                    default_progress = {'level': 1, 'experience_points': 0, 'total_experience': 0}
+                    logger.info(f"Using default progress: {default_progress}")
+                    return default_progress
+            except Exception as fallback_error:
+                logger.error(f"Fallback progress retrieval failed: {fallback_error}")
+                return {'level': 1, 'experience_points': 0, 'total_experience': 0}
     
     def initialize_user_progress(self, user_id: str, level: int) -> bool:
-        """Initialize progress for a new user"""
-        query = '''
-            INSERT OR REPLACE INTO user_progress (user_id, level, experience_points, total_experience, created_at)
-            VALUES (?, ?, 0, 0, ?)
-        '''
-        return self.execute_update(query, (user_id, level, datetime.now().isoformat()))
+        """Initialize progress for a new user - with fallback"""
+        # Try to use user_progress table first
+        try:
+            query = '''
+                INSERT OR REPLACE INTO user_progress (user_id, level, experience_points, total_experience, created_at)
+                VALUES (?, ?, 0, 0, ?)
+            '''
+            return self.execute_update(query, (user_id, level, datetime.now().isoformat()))
+            
+        except Exception as progress_error:
+            logger.warning(f"user_progress table update failed: {progress_error}")
+            # Fallback: store in user settings
+            try:
+                import json
+                user = self.get_user_by_id(user_id)
+                if user:
+                    settings = json.loads(user.get('settings', '{}'))
+                    settings['progress'] = {'level': level, 'experience_points': 0, 'total_experience': 0}
+                    settings_json = json.dumps(settings)
+                    
+                    update_query = 'UPDATE users SET settings = ? WHERE id = ?'
+                    result = self.execute_update(update_query, (settings_json, user_id))
+                    logger.info(f"Stored progress in user settings as fallback")
+                    return result
+                else:
+                    logger.error(f"Could not find user {user_id} for progress fallback")
+                    return False
+            except Exception as fallback_error:
+                logger.error(f"Fallback progress initialization failed: {fallback_error}")
+                return False
     
     def add_experience_points(self, user_id: str, points: int) -> bool:
-        """Add experience points to user"""
-        query = '''
-            UPDATE user_progress 
-            SET experience_points = experience_points + ?, 
-                total_experience = total_experience + ?
-            WHERE user_id = ?
-        '''
-        return self.execute_update(query, (points, points, user_id))
+        """Add experience points to user - with fallback"""
+        # Try user_progress table first
+        try:
+            query = '''
+                UPDATE user_progress 
+                SET experience_points = experience_points + ?, 
+                    total_experience = total_experience + ?
+                WHERE user_id = ?
+            '''
+            return self.execute_update(query, (points, points, user_id))
+            
+        except Exception as progress_error:
+            logger.warning(f"user_progress table experience update failed: {progress_error}")
+            # Fallback: update user settings
+            try:
+                import json
+                user = self.get_user_by_id(user_id)
+                if user:
+                    settings = json.loads(user.get('settings', '{}'))
+                    progress = settings.get('progress', {'level': 1, 'experience_points': 0, 'total_experience': 0})
+                    
+                    progress['experience_points'] += points
+                    progress['total_experience'] += points
+                    settings['progress'] = progress
+                    settings_json = json.dumps(settings)
+                    
+                    update_query = 'UPDATE users SET settings = ? WHERE id = ?'
+                    result = self.execute_update(update_query, (settings_json, user_id))
+                    logger.info(f"Updated experience points in user settings as fallback")
+                    return result
+                else:
+                    return False
+            except Exception as fallback_error:
+                logger.error(f"Fallback experience update failed: {fallback_error}")
+                return False
     
     # Conversation tracking
     def save_conversation(self, user_id: str, topic: str, messages: List[Dict]) -> bool:
