@@ -13,6 +13,8 @@ except ImportError:
     TURSO_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+# Temporarily set to DEBUG to see result structure
+logger.setLevel(logging.DEBUG)
 
 class TursoService:
     """Database service that works with both Turso (production) and SQLite (development)"""
@@ -207,40 +209,89 @@ class TursoService:
             if self.is_turso:
                 result = self.client.execute(query, params)
                 
-                # Handle different result formats from sync vs async clients
+                # Debug: Log the actual result type and attributes
+                logger.debug(f"Turso result type: {type(result)}")
+                logger.debug(f"Turso result attributes: {[attr for attr in dir(result) if not attr.startswith('_')]}")
+                
+                # Handle libsql_client.result.ResultSet from sync client
                 if hasattr(result, 'columns') and hasattr(result, 'rows'):
-                    # Standard async client format
-                    return [dict(zip([col.name for col in result.columns], row)) for row in result.rows]
+                    try:
+                        # Extract column names - handle different column formats
+                        if hasattr(result.columns, '__iter__') and result.columns:
+                            # Check if columns have .name attribute
+                            if hasattr(result.columns[0], 'name'):
+                                columns = [col.name for col in result.columns]
+                            elif isinstance(result.columns[0], str):
+                                columns = list(result.columns)
+                            else:
+                                # Fallback: use string representation
+                                columns = [str(col) for col in result.columns]
+                        else:
+                            columns = []
+                        
+                        # Extract rows data
+                        if hasattr(result.rows, '__iter__'):
+                            rows = list(result.rows)
+                        else:
+                            rows = []
+                        
+                        logger.debug(f"Extracted columns: {columns}")
+                        logger.debug(f"Extracted rows count: {len(rows)}")
+                        
+                        # Create result dictionaries
+                        if columns and rows:
+                            return [dict(zip(columns, row)) for row in rows]
+                        elif rows:
+                            # No column names, use numeric indices
+                            return [dict(enumerate(row)) for row in rows]
+                        else:
+                            return []
+                            
+                    except Exception as parse_error:
+                        logger.warning(f"Error parsing columns/rows: {parse_error}")
+                        # Fallback parsing
+                        try:
+                            # Try to convert result to string and parse
+                            result_str = str(result)
+                            logger.debug(f"Result string representation: {result_str}")
+                            return [{'raw_result': result_str}]
+                        except:
+                            return []
+                
+                # Handle other possible result formats
                 elif hasattr(result, 'fetchall'):
-                    # Sync client might return cursor-like object
                     rows = result.fetchall()
-                    # Get column names if available
-                    if hasattr(result, 'description'):
+                    if hasattr(result, 'description') and result.description:
                         columns = [desc[0] for desc in result.description]
                         return [dict(zip(columns, row)) for row in rows]
                     else:
-                        # Fallback: return as list of tuples converted to dict with numeric keys
                         return [dict(enumerate(row)) for row in rows]
+                
+                # Last resort: try to iterate over result directly
                 else:
-                    # Handle other result formats
-                    logger.warning(f"Unexpected result format from Turso: {type(result)}")
-                    logger.warning(f"Result attributes: {dir(result)}")
-                    
-                    # Try to convert to list if possible
-                    if hasattr(result, '__iter__'):
-                        return [{'result': str(item)} for item in result]
-                    else:
-                        return [{'result': str(result)}]
+                    logger.warning(f"Unknown result format: {type(result)}")
+                    try:
+                        if hasattr(result, '__iter__'):
+                            return [{'result': str(item)} for item in result]
+                        else:
+                            return [{'result': str(result)}]
+                    except:
+                        return []
+                        
             else:
+                # SQLite handling
                 with sqlite3.connect(self.db_path) as conn:
                     conn.row_factory = sqlite3.Row
                     cursor = conn.cursor()
                     cursor.execute(query, params)
                     return [dict(row) for row in cursor.fetchall()]
+                    
         except Exception as e:
             logger.error(f"Database query error: {e}")
             logger.error(f"Query: {query}")
             logger.error(f"Params: {params}")
+            if self.is_turso:
+                logger.error(f"Turso client type: {type(self.client)}")
             return []
     
     def execute_update(self, query: str, params: tuple = ()) -> bool:
