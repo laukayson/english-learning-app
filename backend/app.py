@@ -258,16 +258,17 @@ def chrome_status():
         status['environment_vars'][env_var] = os.environ.get(env_var, 'Not set')
     
     # Check for Chrome binaries
-    chrome_names = ['google-chrome-stable', 'google-chrome', 'chromium-browser', 'chromium']
+    chrome_names = ['chromium-browser', 'google-chrome-stable', 'google-chrome', 'chromium']
     for name in chrome_names:
         binary_path = shutil.which(name)
         status['chrome_binaries'][name] = binary_path or 'Not found'
     
     # Check specific paths
     chrome_paths = [
+        '/usr/bin/chromium-browser',
         '/usr/bin/google-chrome-stable',
         '/usr/bin/google-chrome',
-        '/usr/bin/chromium-browser',
+        '/usr/bin/chromium',
         '/opt/google/chrome/chrome'
     ]
     
@@ -278,7 +279,7 @@ def chrome_status():
             status['chrome_binaries'][f'path_{path}'] = 'Not found'
     
     # Try to get Chrome version
-    for binary in ['google-chrome-stable', 'google-chrome']:
+    for binary in ['chromium-browser', 'google-chrome-stable', 'google-chrome']:
         try:
             result = subprocess.run([binary, '--version'], 
                                   capture_output=True, text=True, timeout=5)

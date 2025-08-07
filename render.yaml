@@ -5,23 +5,19 @@ services:
     env: python
     plan: free
     buildCommand: |
-      # Update package lists first
+      # Update package lists
       apt-get update
-      # Install prerequisites
-      apt-get install -y wget gnupg2 unzip curl
-      # Download and install Chrome directly from .deb package (more reliable for Render)
-      wget -O /tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-      # Install Chrome dependencies first
-      apt-get install -y --fix-missing fonts-liberation libappindicator3-1 libasound2 libatk-bridge2.0-0 libdrm2 libgtk-3-0 libnspr4 libnss3 lsb-release xdg-utils libxss1 libgconf-2-4
-      # Install Chrome package
-      dpkg -i /tmp/google-chrome.deb || apt-get install -fy
-      # Verify installation
-      which google-chrome-stable
-      google-chrome-stable --version
-      # Create symlinks for compatibility
-      ln -sf /usr/bin/google-chrome-stable /usr/local/bin/google-chrome
-      ln -sf /usr/bin/google-chrome-stable /usr/bin/google-chrome
+      # Install Chromium instead of Chrome (more reliable on Ubuntu/Debian)
+      apt-get install -y chromium-browser chromium-chromedriver
+      # Verify Chromium installation
+      which chromium-browser
+      chromium-browser --version
+      # Create Chrome compatibility symlinks
+      ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome-stable
+      ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome
+      ln -sf /usr/bin/chromium-browser /usr/local/bin/google-chrome
       # Verify symlinks
+      which google-chrome-stable
       which google-chrome
       google-chrome --version
       # Install Python dependencies
@@ -43,6 +39,6 @@ services:
       - key: SELENIUM_HEADLESS
         value: true
       - key: GOOGLE_CHROME_BIN
-        value: /usr/bin/google-chrome-stable
+        value: /usr/bin/chromium-browser
       - key: CHROMEDRIVER_PATH
         value: /usr/bin/chromedriver

@@ -60,9 +60,9 @@ class SeleniumChatbot:
             # Search common locations if environment variable not set
             if not chrome_binary:
                 search_locations = [
+                    '/usr/bin/chromium-browser',  # Chromium first (more reliable on Ubuntu)
                     '/usr/bin/google-chrome-stable',
                     '/usr/bin/google-chrome',
-                    '/usr/bin/chromium-browser',
                     '/usr/bin/chromium',
                     '/opt/google/chrome/chrome',
                     '/snap/bin/chromium'
@@ -76,7 +76,7 @@ class SeleniumChatbot:
                 
                 # Finally try shutil.which as fallback
                 if not chrome_binary:
-                    for binary_name in ['google-chrome-stable', 'google-chrome', 'chromium-browser', 'chromium']:
+                    for binary_name in ['chromium-browser', 'google-chrome-stable', 'google-chrome', 'chromium']:
                         chrome_binary = shutil.which(binary_name)
                         if chrome_binary:
                             logger.info(f"✅ Found Chrome binary via which: {chrome_binary}")
