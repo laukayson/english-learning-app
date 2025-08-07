@@ -373,6 +373,23 @@ def text_to_speech():
     else:
         return jsonify({'error': 'Failed to generate speech'}), 500
 
+# API user endpoints
+@app.route('/api/user', methods=['GET', 'POST'])
+@handle_errors
+def api_user():
+    """Handle general /api/user requests"""
+    if request.method == 'GET':
+        return jsonify({
+            'message': 'User API endpoints',
+            'available_endpoints': {
+                'register': '/api/user/register (POST)',
+                'login': '/api/user/login (POST)'
+            }
+        })
+    elif request.method == 'POST':
+        # Redirect POST requests to register endpoint
+        return register_user()
+
 # User registration endpoint (same as before)
 @app.route('/api/user/register', methods=['POST'])
 @rate_limit('default')

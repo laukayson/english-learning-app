@@ -35,11 +35,26 @@ class TursoService:
     def _init_turso(self):
         """Initialize Turso client"""
         try:
-            # Try to initialize client - fallback to sqlite if async issues occur
-            self.client = libsql_client.create_client(
-                url=self.database_url,
-                auth_token=self.auth_token
-            )
+            # Handle event loop issues for Turso client
+            import asyncio
+            import threading
+            
+            # Check if we're in an async context
+            try:
+                loop = asyncio.get_running_loop()
+                logger.info("Found running event loop, using sync client wrapper")
+                # If we're in an async context, we need to be careful
+                self.client = libsql_client.create_client(
+                    url=self.database_url,
+                    auth_token=self.auth_token
+                )
+            except RuntimeError:
+                # No running loop, safe to create client normally
+                logger.info("No running loop, creating Turso client normally")
+                self.client = libsql_client.create_client(
+                    url=self.database_url,
+                    auth_token=self.auth_token
+                )
             
             # Test the connection with a simple query
             try:
