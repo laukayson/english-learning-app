@@ -45,18 +45,47 @@ class SeleniumChatbot:
             # Set up Chrome options - Configurable headless mode for debugging
             options = Options()
             
-            # Detect Chrome binary on Render
+            # Detect Chrome binary on Render with comprehensive search
             import shutil
+            import os
             chrome_binary = None
-            for binary_name in ['google-chrome-stable', 'google-chrome', 'chromium-browser', 'chromium']:
-                chrome_binary = shutil.which(binary_name)
-                if chrome_binary:
-                    logger.info(f"✅ Found Chrome binary: {chrome_binary}")
-                    options.binary_location = chrome_binary
-                    break
             
+            # Check environment variable first (set in render.yaml)
+            if os.environ.get('GOOGLE_CHROME_BIN'):
+                env_chrome = os.environ.get('GOOGLE_CHROME_BIN')
+                if os.path.exists(env_chrome):
+                    chrome_binary = env_chrome
+                    logger.info(f"✅ Found Chrome from environment: {chrome_binary}")
+            
+            # Search common locations if environment variable not set
             if not chrome_binary:
-                logger.warning("⚠️ No Chrome binary found - using default")
+                search_locations = [
+                    '/usr/bin/google-chrome-stable',
+                    '/usr/bin/google-chrome',
+                    '/usr/bin/chromium-browser',
+                    '/usr/bin/chromium',
+                    '/opt/google/chrome/chrome',
+                    '/snap/bin/chromium'
+                ]
+                
+                for location in search_locations:
+                    if os.path.exists(location):
+                        chrome_binary = location
+                        logger.info(f"✅ Found Chrome at: {chrome_binary}")
+                        break
+                
+                # Finally try shutil.which as fallback
+                if not chrome_binary:
+                    for binary_name in ['google-chrome-stable', 'google-chrome', 'chromium-browser', 'chromium']:
+                        chrome_binary = shutil.which(binary_name)
+                        if chrome_binary:
+                            logger.info(f"✅ Found Chrome binary via which: {chrome_binary}")
+                            break
+            
+            if chrome_binary:
+                options.binary_location = chrome_binary
+            else:
+                logger.warning("⚠️ No Chrome binary found - using default (may cause issues)")
             
             if self.headless:
                 options.add_argument("--headless")
