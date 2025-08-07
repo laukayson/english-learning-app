@@ -207,11 +207,10 @@ class TursoService:
         """Execute a query and return results"""
         try:
             if self.is_turso:
-                result = self.client.execute(query, params)
-                
-                # Debug: Log the actual result type and attributes
-                logger.debug(f"Turso result type: {type(result)}")
-                logger.debug(f"Turso result attributes: {[attr for attr in dir(result) if not attr.startswith('_')]}")
+                if params:
+                    result = self.client.execute(query, params)
+                else:
+                    result = self.client.execute(query)
                 
                 # Handle libsql_client.result.ResultSet from sync client
                 if hasattr(result, 'columns') and hasattr(result, 'rows'):
@@ -219,15 +218,10 @@ class TursoService:
                         # Extract column names - handle different column formats
                         columns = []
                         if hasattr(result, 'columns') and result.columns:
-                            logger.debug(f"Raw columns: {result.columns}")
-                            logger.debug(f"Columns type: {type(result.columns)}")
-                            
                             # Handle different column formats
                             try:
                                 # Try to iterate over columns
                                 for i, col in enumerate(result.columns):
-                                    logger.debug(f"Column {i}: {col} (type: {type(col)})")
-                                    
                                     # Check different ways to get column name
                                     if isinstance(col, str):
                                         columns.append(col)
@@ -249,17 +243,11 @@ class TursoService:
                         # Extract rows data
                         rows = []
                         if hasattr(result, 'rows') and result.rows:
-                            logger.debug(f"Raw rows: {result.rows}")
-                            logger.debug(f"Rows type: {type(result.rows)}")
                             try:
                                 rows = list(result.rows)
-                                logger.debug(f"Converted rows: {rows}")
                             except Exception as row_error:
                                 logger.warning(f"Row conversion failed: {row_error}")
                                 rows = []
-                        
-                        logger.debug(f"Final columns: {columns}")
-                        logger.debug(f"Final rows count: {len(rows)}")
                         
                         # Create result dictionaries
                         if columns and rows:
