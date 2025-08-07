@@ -39,6 +39,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+backend/logs/
 data/logs/
 
 # Database
@@ -46,25 +47,33 @@ data/logs/
 *.sqlite
 *.sqlite3
 
-# Browser cache
+# Cache
 backend/cache/
 data/cache/
+backend/__pycache__/
+backend/services/__pycache__/
 
-# Development files (cleaned up)
-*BACKUP*
-*_SUMMARY.md
-*_GUIDE.md
-*_ANALYSIS.md
-*_FIXES.md
-*_IMPLEMENTATION.md
-*_MIGRATION*.md
-*_CLEANUP*.md
-*_INTEGRATION*.md
-*_SECURITY.md
-*_VERIFICATION*.md
+# Development and test files
 test_*.html
 test_*.py
-cleanup_*.bat
+debug_*.py
+cleanup_*.py
+*_BACKUP_*.py
+*_test.py
+*_debug.py
+
+# Temporary deployment files
+migrate_to_turso.py
+setup_render_turso.py
+pythonanywhere_*.py
+render_selenium_client.py
+build_render.sh
+
+# Documentation backups
+*_DEPLOYMENT.md
+*_FIXES.md
+*_DEBUG.md
+*_TROUBLESHOOTING.md
 
 # Selenium
 selenium-*.log
@@ -83,3 +92,8 @@ geckodriver.log
 *.wav
 *.mp3
 *.ogg
+
+# Platform-specific directories
+replit_files/
+render_selenium_service/
+data/
