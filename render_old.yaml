@@ -1,0 +1,216 @@
+# Render deployment configuration (FULL VERSION with Voice Features)
+services:
+  - type: web
+    name: english-learning-app
+    env: python
+    plan: free
+    buildCommand: |
+      echo "🚀 Starting build process..."
+      echo "User: $(whoami), Directory: $(pwd)"
+      echo "OS: $(cat /etc/os-release | head -2)"
+      
+      # Update package lists first
+      echo "📦 Updating package lists..."
+      sudo apt-get update -y
+      
+      # Install basic dependencies
+      echo "🔧 Installing system dependencies..."
+      sudo apt-get install -y wget curl gnupg2 software-properties-common apt-transport-https ca-certificates
+      
+      # Chrome Installation - Method 1: Official Google Repository (Most Reliable)
+      echo "🌐 Installing Google Chrome via official repository..."
+      
+      # Add Google's official GPG key
+      echo "Adding Google GPG key..."
+      wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+      
+      # Add Google Chrome repository
+      echo "Adding Google Chrome repository..."
+      echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+      
+      # Update package lists after adding repository
+      echo "Updating package lists with Chrome repository..."
+      sudo apt-get update -y
+      
+      # Install Google Chrome
+      echo "Installing Google Chrome stable..."
+      sudo apt-get install -y google-chrome-stable
+      
+      # Verify Chrome installation
+      echo "🔍 Verifying Chrome installation..."
+      if [ -f "/usr/bin/google-chrome-stable" ]; then
+        echo "✅ Google Chrome installed successfully"
+        /usr/bin/google-chrome-stable --version
+        
+        # Create symlinks
+        echo "Creating Chrome symlinks..."
+        sudo ln -sf /usr/bin/google-chrome-stable /usr/local/bin/google-chrome
+        sudo ln -sf /usr/bin/google-chrome-stable /usr/local/bin/chrome
+        sudo ln -sf /usr/bin/google-chrome-stable /usr/local/bin/chromium
+        
+        echo "✅ Chrome symlinks created"
+      else
+        echo "❌ Google Chrome installation failed, trying Chromium..."
+        
+        # Fallback to Chromium
+        sudo apt-get install -y chromium-browser
+        
+        if [ -f "/usr/bin/chromium-browser" ]; then
+          echo "✅ Chromium installed as fallback"
+          /usr/bin/chromium-browser --version
+          
+          # Create symlinks for Chromium
+          sudo ln -sf /usr/bin/chromium-browser /usr/local/bin/google-chrome
+          sudo ln -sf /usr/bin/chromium-browser /usr/local/bin/chrome
+          sudo ln -sf /usr/bin/chromium-browser /usr/local/bin/chromium
+        else
+          echo "❌ Both Chrome and Chromium installation failed"
+        fi
+      fi
+      
+      # Final verification
+      echo "🎯 Final Chrome verification..."
+      echo "Available Chrome binaries:"
+      ls -la /usr/bin/*chrome* 2>/dev/null || echo "No chrome binaries in /usr/bin"
+      ls -la /usr/bin/*chromium* 2>/dev/null || echo "No chromium binaries in /usr/bin"
+      ls -la /usr/local/bin/*chrome* 2>/dev/null || echo "No chrome symlinks in /usr/local/bin"
+      
+      # Test Chrome execution
+      echo "Testing Chrome execution..."
+      if command -v google-chrome >/dev/null 2>&1; then
+        google-chrome --version && echo "✅ google-chrome command works"
+      else
+        echo "❌ google-chrome command not available"
+      fi
+      
+      if command -v google-chrome-stable >/dev/null 2>&1; then
+        google-chrome-stable --version && echo "✅ google-chrome-stable command works"
+      else
+        echo "❌ google-chrome-stable command not available"
+      fi
+      
+      # Install Python dependencies
+      echo "📦 Installing Python dependencies..."
+      pip install -r requirements.txt
+      
+      echo "🎯 Build completed!"
+      cd /tmp
+      wget -O google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb || echo "Chrome download failed"
+      
+      if [ -f google-chrome.deb ]; then
+        echo "Chrome package downloaded successfully"
+        sudo dpkg -i google-chrome.deb || echo "Initial Chrome install failed (expected)"
+        sudo apt-get install -f -y || echo "Chrome dependency install failed"
+        echo "Chrome installation attempt completed"
+      else
+        echo "Chrome download failed, trying alternative..."
+      fi
+      
+      # Method 2: Repository-based installation
+      echo "📥 Method 2: Repository installation..."
+      wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add - || echo "Google key failed"
+      echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list || echo "Chrome repo failed"
+      sudo apt-get update || echo "Chrome repo update failed"
+      sudo apt-get install -y google-chrome-stable || echo "Repository Chrome install failed"
+      
+      # Method 3: Chromium fallback
+      echo "� Method 3: Chromium fallback..."
+      sudo apt-get install -y chromium-browser || echo "Chromium install failed"
+      
+      # Comprehensive verification and symlinking
+      echo "🔍 Comprehensive Chrome verification..."
+      
+      # Check what actually got installed
+      echo "--- Package verification ---"
+      dpkg -l | grep -E "(google-chrome|chromium)" || echo "No Chrome packages found"
+      
+      # Check all possible binary locations
+      echo "--- Binary location check ---"
+      CHROME_LOCATIONS=(
+        "/usr/bin/google-chrome-stable"
+        "/usr/bin/google-chrome"
+        "/usr/bin/chromium-browser"
+        "/usr/bin/chromium"
+        "/opt/google/chrome/chrome"
+        "/opt/google/chrome/google-chrome"
+      )
+      
+      FOUND_CHROME=""
+      for location in "${CHROME_LOCATIONS[@]}"; do
+        if [ -f "$location" ]; then
+          echo "✅ Found Chrome at: $location"
+          if [ -z "$FOUND_CHROME" ]; then
+            FOUND_CHROME="$location"
+          fi
+          # Test if it works
+          $location --version && echo "  ✅ Version check passed" || echo "  ❌ Version check failed"
+        else
+          echo "❌ Not found: $location"
+        fi
+      done
+      
+      # Create universal symlinks if we found Chrome
+      if [ -n "$FOUND_CHROME" ]; then
+        echo "🔗 Creating universal symlinks using: $FOUND_CHROME"
+        sudo mkdir -p /usr/local/bin
+        
+        # Create all common Chrome aliases
+        sudo ln -sf "$FOUND_CHROME" /usr/local/bin/google-chrome-stable || echo "symlink 1 failed"
+        sudo ln -sf "$FOUND_CHROME" /usr/local/bin/google-chrome || echo "symlink 2 failed"
+        sudo ln -sf "$FOUND_CHROME" /usr/local/bin/chrome || echo "symlink 3 failed"
+        sudo ln -sf "$FOUND_CHROME" /usr/local/bin/chromium || echo "symlink 4 failed"
+        sudo ln -sf "$FOUND_CHROME" /usr/local/bin/chromium-browser || echo "symlink 5 failed"
+        
+        echo "✅ Chrome symlinks created successfully"
+        echo "✅ Chrome binary available at: $FOUND_CHROME"
+        
+        # Test the symlinks
+        echo "--- Testing symlinks ---"
+        /usr/local/bin/google-chrome --version && echo "✅ google-chrome symlink works" || echo "❌ google-chrome symlink failed"
+        /usr/local/bin/chromium --version && echo "✅ chromium symlink works" || echo "❌ chromium symlink failed"
+      else
+        echo "❌ NO CHROME BINARY FOUND - All installation methods failed"
+        echo "❌ Selenium chatbot will not work without Chrome"
+      fi
+      
+      # Final PATH and environment setup
+      echo "--- Environment setup ---"
+      echo "PATH: $PATH"
+      echo "Available Chrome commands:"
+      which google-chrome-stable && echo "✅ google-chrome-stable available" || echo "❌ google-chrome-stable not available"
+      which google-chrome && echo "✅ google-chrome available" || echo "❌ google-chrome not available"
+      which chromium && echo "✅ chromium available" || echo "❌ chromium not available"
+      which chromium-browser && echo "✅ chromium-browser available" || echo "❌ chromium-browser not available"
+      
+      # Install Python dependencies
+      echo "📦 Installing Python dependencies..."
+      pip install -r requirements.txt
+      
+      echo "🎯 Build process completed!"
+      if [ -n "$FOUND_CHROME" ]; then
+        echo "✅ Chrome installation: SUCCESS"
+      else
+        echo "❌ Chrome installation: FAILED"
+      fi
+    startCommand: python backend/app.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: FLASK_ENV
+        value: production
+      - key: RENDER
+        value: true
+      - key: SELENIUM_HEADLESS
+        value: true
+      - key: GOOGLE_CHROME_BIN
+        value: /usr/local/bin/google-chrome
+      - key: CHROMEDRIVER_PATH
+        value: /usr/local/bin/chromedriver
+      - key: PATH
+        value: /usr/local/bin:/snap/bin:/usr/bin:/bin
+      - key: GOOGLE_TRANSLATE_API_KEY
+        sync: false
