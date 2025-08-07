@@ -5,21 +5,15 @@ services:
     env: python
     plan: free
     buildCommand: |
-      # Install Chrome for Selenium using comprehensive approach
+      # Update package lists
       apt-get update
-      apt-get install -y wget gnupg2 software-properties-common curl unzip xvfb
-      # Install Chrome dependencies first
-      apt-get install -y ca-certificates fonts-liberation libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libdrm2 libgtk-3-0 libnspr4 libnss3 libwayland-client0 libxcomposite1 libxdamage1 libxfixes3 libxkbcommon0 libxrandr2 xdg-utils libu2f-udev libvulkan1
-      # Add Chrome repository
-      wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
-      echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list
+      # Install Chrome using the official Google approach for Render
+      wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
+      sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
       apt-get update
-      # Install Chrome with error handling
-      apt-get install -y google-chrome-stable || apt-get install -y chromium-browser || echo "Chrome installation failed - proceeding with fallback"
-      # Verify and set environment
-      export GOOGLE_CHROME_BIN=/usr/bin/google-chrome-stable
-      which google-chrome-stable || export GOOGLE_CHROME_BIN=/usr/bin/chromium-browser
-      echo "Chrome binary: $GOOGLE_CHROME_BIN"
+      apt-get install -y google-chrome-stable
+      # Verify Chrome installation
+      google-chrome-stable --version
       # Install Python dependencies
       pip install -r requirements.txt
     startCommand: python backend/app.py

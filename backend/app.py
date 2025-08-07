@@ -372,7 +372,7 @@ def start_stt_recording():
         })
     
     # Initialize STT service lazily on first use
-    if not web_stt_service.is_initialized:
+    if not hasattr(web_stt_service, 'is_initialized') or not web_stt_service.is_initialized:
         logger.info("Initializing Web STT service on first use...")
         try:
             if os.environ.get('RENDER'):
