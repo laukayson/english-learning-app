@@ -23,11 +23,21 @@ class TursoService:
         self.client = None
         self.is_turso = self.database_url and self.database_url.startswith('libsql://')
         
+        # Debug logging for Turso configuration
         logger.info(f"Initializing database service - Turso: {self.is_turso}")
+        logger.info(f"Database URL present: {bool(self.database_url)}")
+        logger.info(f"Auth token present: {bool(self.auth_token)}")
+        if self.database_url:
+            logger.info(f"Database URL starts with libsql://: {self.database_url.startswith('libsql://')}")
         
         if self.is_turso and TURSO_AVAILABLE:
+            logger.info("Turso client available, attempting connection...")
             self._init_turso()
         else:
+            if not TURSO_AVAILABLE:
+                logger.warning("Turso client library not available, falling back to SQLite")
+            if not self.is_turso:
+                logger.info("Not configured for Turso, using SQLite")
             self._init_sqlite()
         
         self._create_tables()
@@ -37,23 +47,37 @@ class TursoService:
         try:
             logger.info("Creating Turso client...")
             
-            # Simple client creation without async handling
-            self.client = libsql_client.create_client(
-                url=self.database_url,
-                auth_token=self.auth_token
-            )
+            # Try creating client with sync mode
+            try:
+                self.client = libsql_client.create_client_sync(
+                    url=self.database_url,
+                    auth_token=self.auth_token
+                )
+                logger.info("✅ Created Turso sync client")
+            except AttributeError:
+                # Fallback to regular client if sync version doesn't exist
+                logger.info("Sync client not available, trying regular client...")
+                self.client = libsql_client.create_client(
+                    url=self.database_url,
+                    auth_token=self.auth_token
+                )
+                logger.info("✅ Created Turso regular client")
             
             # Test the connection with a simple query
             try:
                 result = self.client.execute("SELECT 1")
-                logger.info("✅ Connected to Turso database")
+                logger.info("✅ Connected to Turso database successfully")
+                return True
             except Exception as test_error:
                 logger.warning(f"Turso connection test failed: {test_error}")
                 raise test_error
                 
         except Exception as e:
             logger.error(f"❌ Failed to connect to Turso: {e}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Error details: {str(e)}")
             self._fallback_to_sqlite()
+            return False
     
     def _init_sqlite(self):
         """Initialize SQLite fallback"""

@@ -300,6 +300,48 @@ def chrome_status():
     
     return jsonify(status)
 
+@app.route('/api/turso-status', methods=['GET'])
+def turso_status():
+    """Check Turso configuration and connection status"""
+    import os
+    
+    status = {
+        'timestamp': datetime.now().isoformat(),
+        'environment_vars': {
+            'TURSO_DATABASE_URL': 'Set' if os.environ.get('TURSO_DATABASE_URL') else 'Not set',
+            'TURSO_AUTH_TOKEN': 'Set' if os.environ.get('TURSO_AUTH_TOKEN') else 'Not set'
+        },
+        'database_url_format': None,
+        'is_turso_configured': False,
+        'current_database': 'sqlite',
+        'libsql_available': False
+    }
+    
+    # Check if libsql client is available
+    try:
+        import libsql_client
+        status['libsql_available'] = True
+    except ImportError:
+        status['libsql_available'] = False
+    
+    # Check database URL format
+    db_url = os.environ.get('TURSO_DATABASE_URL')
+    if db_url:
+        if db_url.startswith('libsql://'):
+            status['database_url_format'] = 'libsql (Turso)'
+            status['is_turso_configured'] = True
+        elif db_url.startswith('file://'):
+            status['database_url_format'] = 'file (SQLite)'
+        else:
+            status['database_url_format'] = 'unknown'
+    
+    # Check current database service status
+    if db_service:
+        status['current_database'] = 'turso' if db_service.is_turso else 'sqlite'
+        status['health'] = db_service.health_check()
+    
+    return jsonify(status)
+
 @app.route('/api/test-db', methods=['GET'])
 def test_database():
     """Test database connection and show all users"""
