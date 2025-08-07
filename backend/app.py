@@ -299,6 +299,28 @@ def chrome_status():
     
     return jsonify(status)
 
+@app.route('/api/test-db', methods=['GET'])
+def test_database():
+    """Test database connection and show all users"""
+    try:
+        # Get all users from database
+        query = 'SELECT id, username, name, age, level, created_at FROM users ORDER BY created_at DESC LIMIT 10'
+        users = db_service.execute_query(query)
+        
+        return jsonify({
+            'status': 'success',
+            'database_type': 'turso' if db_service.is_turso else 'sqlite',
+            'user_count': len(users),
+            'recent_users': users,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        })
+
 # Chat initialization endpoint
 @app.route('/api/chat/init-topic', methods=['POST'])
 @rate_limit('default')
@@ -660,9 +682,9 @@ def verify_user():
     user = db_service.get_user_by_username(username)
     
     if user:
-        return jsonify({'exists': True, 'user_id': user['id']})
+        return jsonify({'user_exists': True, 'user_id': user['id']})
     else:
-        return jsonify({'exists': False})
+        return jsonify({'user_exists': False})
 
 # User level info endpoint
 @app.route('/api/user-level-info/<user_id>', methods=['GET'])
