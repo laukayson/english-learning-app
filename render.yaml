@@ -1,0 +1,27 @@
+# Render deployment configuration (FULL VERSION with Voice Features)
+services:
+  - type: web
+    name: english-learning-app
+    env: python
+    plan: free
+    buildCommand: |
+      # Install Chrome/Chromium for Selenium
+      apt-get update && apt-get install -y chromium-browser chromium-chromedriver
+      # Install Python dependencies
+      pip install -r requirements_render_full.txt
+    startCommand: python backend/app_render_full.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: FLASK_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: RENDER
+        value: true
+      - key: SELENIUM_HEADLESS
+        value: true

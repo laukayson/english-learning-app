@@ -1,0 +1,22 @@
+# English Learning App Dependencies - Cleaned and Optimised
+# Updated: August 3, 2025 - Removed SpeechRecognition (replaced with web-based STT)
+
+# Core Web Framework
+flask==3.0.3
+flask-cors==4.0.1
+
+# HTTP and API requests
+requests==2.32.3
+
+# Browser automation for chatbot and web-based STT
+selenium==4.22.0
+webdriver-manager==4.0.1
+
+# Production server (optional for deployment)
+gunicorn==22.0.0
+
+# Optional: For offline speech recognition (currently imported but not required)
+# vosk>=0.3.45
+
+# Optional: Image processing (currently commented out in code)
+# Pillow==10.4.0

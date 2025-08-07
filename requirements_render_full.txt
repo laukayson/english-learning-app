@@ -1,0 +1,25 @@
+# English Learning App Dependencies - Render (Full Version with Voice Features)
+# Updated for Render deployment with Turso database AND Selenium support
+
+# Core Web Framework
+flask==3.0.3
+flask-cors==4.0.1
+
+# HTTP and API requests
+requests==2.32.3
+
+# Turso Database (libSQL)
+libsql-client==0.3.0
+
+# Browser automation for chatbot and web-based STT (SUPPORTED on Render!)
+selenium==4.22.0
+webdriver-manager==4.0.1
+
+# Production server
+gunicorn==22.0.0
+
+# Environment variables
+python-dotenv==1.0.0
+
+# For Render environment - Chrome/Chromium will be installed via apt
+# Note: Chrome installation will be handled in build command

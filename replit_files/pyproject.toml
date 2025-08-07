@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "english-learning-app"
+version = "1.0.0"
+description = "AI-powered English conversation practice app"
+author = "Your Name"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+flask = "^2.3.3"
+flask-cors = "^4.0.0"
+requests = "^2.31.0"
+python-dotenv = "^1.0.0"
+gunicorn = "^21.2.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

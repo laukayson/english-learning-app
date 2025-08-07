@@ -1,0 +1,5 @@
+# Backend-specific requirements (use main requirements.txt for full installation)
+# This file is kept for reference but main requirements.txt should be used
+
+# Core dependencies are in main requirements.txt
+# This file exists for historical reasons but is no longer needed

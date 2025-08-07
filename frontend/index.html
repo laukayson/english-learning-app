@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>English Learning</title>
+        <link rel="stylesheet" href="styles/main.css?v=20241215">
+        <link rel="stylesheet" href="styles/components.css?v=20241215">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    </head>
+    <body>
+        <div id="app">
+            <!-- Loading Screen -->
+            <div id="loading-screen" class="loading-screen">
+                <div class="spinner"></div>
+                <p>Loading your learning journey...</p>
+            </div>
+
+            <!-- Welcome Screen -->
+            <div id="welcome-screen" class="screen active">
+                <div class="welcome-container">
+                    <div class="welcome-header">
+                        <h1>Welcome to English Learning</h1>
+                        <p class="subtitle">Your journey to English fluency starts here</p>
+                        <p class="farsi-subtitle" dir="rtl">سفر شما به یادگیری انگلیسی از اینجا شروع می‌شود</p>
+                    </div>
+                    
+                    <div class="welcome-actions">
+                        <button id="new-user-btn" class="btn btn-primary">
+                            <span class="btn-text">New Student</span>
+                            <span class="btn-farsi" dir="rtl">دانش‌آموز جدید</span>
+                        </button>
+                        <button id="returning-user-btn" class="btn btn-secondary">
+                            <span class="btn-text">Returning Student</span>
+                            <span class="btn-farsi" dir="rtl">دانش‌آموز قبلی</span>
+                        </button>
+                    </div>
+
+                    <div class="language-toggle">
+                        <button id="lang-toggle" class="lang-btn">
+                            <span class="flag">🇦🇫</span>
+                            <span>فارسی</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Registration Screen -->
+            <div id="registration-screen" class="screen">
+                <div class="form-container">
+                    <h2>Create Your Profile</h2>
+                    <p class="form-subtitle" dir="rtl">پروفایل خود را ایجاد کنید</p>
+                    
+                    <form id="registration-form">
+                        <div class="form-group">
+                            <label for="username">Username / نام کاربری</label>
+                            <input type="text" id="username" name="username" required minlength="3" maxlength="50">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Password / رمز عبور</label>
+                            <input type="password" id="password" name="password" required minlength="6" maxlength="100">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirm-password">Confirm Password / تأیید رمز عبور</label>
+                            <input type="password" id="confirm-password" name="confirm-password" required minlength="6" maxlength="100">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="name">Display Name / نام نمایشی</label>
+                            <input type="text" id="name" name="name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="age">Age / سن</label>
+                            <input type="number" id="age" name="age" min="5" max="100" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Learning Level / سطح یادگیری</label>
+                            <div class="level-selector">
+                                <div class="level-option" data-level="1">
+                                    <input type="radio" name="level" value="1" id="level1">
+                                    <label for="level1">
+                                        <span class="level-number">1</span>
+                                        <span class="level-title">Absolute Beginner</span>
+                                        <span class="level-desc">مبتدی مطلق</span>
+                                    </label>
+                                </div>
+                                <div class="level-option" data-level="2">
+                                    <input type="radio" name="level" value="2" id="level2">
+                                    <label for="level2">
+                                        <span class="level-number">2</span>
+                                        <span class="level-title">Basic</span>
+                                        <span class="level-desc">پایه</span>
+                                    </label>
+                                </div>
+                                <div class="level-option" data-level="3">
+                                    <input type="radio" name="level" value="3" id="level3">
+                                    <label for="level3">
+                                        <span class="level-number">3</span>
+                                        <span class="level-title">Intermediate</span>
+                                        <span class="level-desc">متوسط</span>
+                                    </label>
+                                </div>
+                                <div class="level-option" data-level="4">
+                                    <input type="radio" name="level" value="4" id="level4">
+                                    <label for="level4">
+                                        <span class="level-number">4</span>
+                                        <span class="level-title">Advanced</span>
+                                        <span class="level-desc">پیشرفته</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            Start Learning / شروع یادگیری
+                        </button>
+                    </form>
+
+                    <button id="back-to-welcome-from-register" class="btn btn-text">
+                        ← Back to Welcome
+                    </button>
+                </div>
+            </div>
+
+            <!-- Login Screen -->
+            <div id="login-screen" class="screen">
+                <div class="form-container">
+                    <h2>Welcome Back</h2>
+                    <p class="form-subtitle" dir="rtl">خوش آمدید</p>
+                    
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label for="login-username">Username / نام کاربری</label>
+                            <input type="text" id="login-username" name="username" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="login-password">Password / رمز عبور</label>
+                            <input type="password" id="login-password" name="password" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            Continue Learning / ادامه یادگیری
+                        </button>
+                    </form>
+
+                    <button id="back-to-welcome" class="btn btn-text">
+                        ← Back to Welcome
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Dashboard -->
+            <div id="dashboard-screen" class="screen">
+                <header class="app-header">
+                    <div class="header-content">
+                        <h1 id="user-greeting">Hello, Student!</h1>
+                        <div class="header-actions">
+                            <button id="voice-toggle" class="icon-btn" title="Voice Mode">
+                                🎤
+                            </button>
+                            <button id="settings-btn" class="icon-btn" title="Settings">
+                                ⚙️
+                            </button>
+                            <button id="logout-btn" class="icon-btn" title="Logout">
+                                🚪
+                            </button>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="daily-progress"></div>
+                    </div>
+                </header>
+
+                <main class="dashboard-main">
+                    <div class="dashboard-grid">
+                        <!-- Learning Topics -->
+                        <div class="card topics-card">
+                            <h3>📚 Choose Your Topic</h3>
+                            <div class="topics-grid" id="topics-grid">
+                                <!-- Topics will be populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Quick Practice -->
+                        <div class="card quick-practice">
+                            <h3>⚡ Quick Practice</h3>
+                            <button class="practice-btn" id="conversation-practice">
+                                <span>💬</span>
+                                <div>
+                                    <strong>AI Conversation</strong>
+                                    <small>Practice speaking with AI tutor</small>
+                                </div>
+                            </button>
+                        </div>
+
+                        <!-- Progress Overview -->
+                        <div class="card progress-card">
+                            <h3>📈 Your Progress</h3>
+                            
+                            <!-- Level and XP Display -->
+                            <div class="level-section">
+                                <div class="level-badge">
+                                    <span class="level-number" id="user-level">1</span>
+                                    <span class="level-label">Level</span>
+                                </div>
+                                <div class="xp-section">
+                                    <div class="xp-bar">
+                                        <div class="xp-fill" id="xp-fill"></div>
+                                    </div>
+                                    <div class="xp-text">
+                                        <span id="current-xp">0</span> / <span id="next-level-xp">100</span> XP
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Progress Stats -->
+                            <div class="progress-stats">
+                                <div class="stat">
+                                    <span class="stat-number" id="total-xp">0</span>
+                                    <span class="stat-label">Total XP</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-number" id="topics-completed">0</span>
+                                    <span class="stat-label">Topics Completed</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-number" id="days-streak">0</span>
+                                    <span class="stat-label">Day Streak</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+
+            <!-- Conversation Screen -->
+            <div id="conversation-screen" class="screen">
+                <header class="conversation-header">
+                    <button id="back-to-dashboard" class="back-btn">← Back</button>
+                    <h2 id="conversation-topic-title">AI Conversation</h2>
+                    <div class="conversation-controls">
+                        <button id="switch-topic-btn" class="icon-btn" title="Switch Topic">📚</button>
+                        <button id="voice-input-btn" class="icon-btn">🎤</button>
+                        <button id="help-btn" class="icon-btn">❓</button>
+                    </div>
+                </header>
+
+                <div class="conversation-container">
+                    <div class="messages-container" id="messages-container">
+                        <!-- Messages will be added here -->
+                    </div>
+
+                    <!-- System Status Area -->
+                    <div id="system-status" class="system-status" style="display: none;">
+                        <span id="status-text"></span>
+                        <button id="status-close" class="status-close">&times;</button>
+                    </div>
+
+                    <div class="input-container">
+                        <div class="input-group">
+                            <input type="text" id="user-input" placeholder="Type your message... / پیام خود را بنویسید...">
+                            <button id="send-btn" class="send-btn">Send</button>
+                        </div>
+                        <button id="voice-btn" class="voice-btn">
+                            <span class="voice-icon">🎤</span>
+                            <span class="voice-text">Tap to Speak</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Modal -->
+            <div id="settings-modal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Settings</h3>
+                        <button class="close-btn" id="close-settings">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="setting-group">
+                            <label>Learning Level</label>
+                            <select id="level-select">
+                                <option value="1">Level 1 - Absolute Beginner</option>
+                                <option value="2">Level 2 - Basic</option>
+                                <option value="3">Level 3 - Intermediate</option>
+                                <option value="4">Level 4 - Advanced</option>
+                            </select>
+                        </div>
+                        <div class="setting-group">
+                            <label>
+                                <input type="checkbox" id="farsi-audio"> 
+                                Enable Farsi Audio
+                            </label>
+                        </div>
+                        <div class="setting-group">
+                            <label>
+                                <input type="checkbox" id="visual-aids"> 
+                                Show Visual Aids
+                            </label>
+                        </div>
+                        <div class="setting-group">
+                            <label>
+                                <input type="checkbox" id="pronunciation-check"> 
+                                Pronunciation Checking
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scripts with cache busting -->
+        <script src="js/config.js?v=20250802b"></script>
+        <script src="js/utils.js?v=20250802b"></script>
+        <script src="js/storage.js?v=20250802b"></script>
+        <script src="js/voice.js?v=20250802b"></script>
+        <script src="js/enhanced_voice.js?v=20250803"></script>
+        <script src="js/ai.js?v=20250802b"></script>
+        <script src="js/topics.js?v=20250802b"></script>
+        <script src="js/progress.js?v=20250802b"></script>
+        <script src="js/conversation.js?v=20250802b"></script>
+        <script src="js/app.js?v=20250802b"></script>
+    </body>
+</html>

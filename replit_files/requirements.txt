@@ -1,0 +1,2 @@
+# Your existing requirements.txt content - just copy it as-is
+# This should match your current requirements.txt file exactly
