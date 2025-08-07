@@ -116,7 +116,7 @@ CREATE INDEX idx_chat_timestamp ON chat_history(timestamp);
 Since you've chosen the **full-featured version**, your render.yaml is already configured correctly:
 
 ```yaml
-startCommand: python backend/app_render_full.py
+startCommand: python backend/app.py
 ```
 
 This gives you:
@@ -128,9 +128,9 @@ This gives you:
 
 ### 2.2 Verify Required Files
 Make sure these files exist in your project:
-- [ ] `requirements_render_full.txt` (✅ Already created)
-- [ ] `config_render_full.py` (✅ Already created) 
-- [ ] `backend/app_render_full.py` (✅ Already created)
+- [ ] `requirements.txt` (✅ Already created)
+- [ ] `backend/config.py` (✅ Already created) 
+- [ ] `backend/app.py` (✅ Already created)
 - [ ] `backend/turso_service.py` (✅ Already created)
 - [ ] `render.yaml` (✅ Already created)
 
@@ -195,8 +195,8 @@ git push -u origin main
 **Basic Settings:**
 - **Name**: `english-learning-app` (or your preferred name)
 - **Environment**: `Python 3`
-- **Build Command**: `pip install -r requirements_render_full.txt`
-- **Start Command**: `python backend/app_render_full.py` ✅ **Full-featured version**
+- **Build Command**: `pip install -r requirements.txt`
+- **Start Command**: `python backend/app.py` ✅ **Full-featured version**
 
 **Advanced Settings:**
 - **Instance Type**: `Free` (512 MB RAM, shared CPU)

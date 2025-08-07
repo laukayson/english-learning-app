@@ -1,6 +1,56 @@
-# Configuration for Language Learning App Backend
+# Render configuration with FULL features (including voice)
+import os
+from urllib.parse import urlparse
 
-# Learning levels and their topics
+# Environment detection
+ENVIRONMENT = os.environ.get('FLASK_ENV', 'development')
+IS_RENDER = os.environ.get('RENDER', False)
+
+# Database Configuration for Turso
+TURSO_DATABASE_URL = os.environ.get('TURSO_DATABASE_URL')
+TURSO_AUTH_TOKEN = os.environ.get('TURSO_AUTH_TOKEN')
+
+# Fallback to local SQLite for development
+if not TURSO_DATABASE_URL:
+    TURSO_DATABASE_URL = 'file:data/db/language_app.db'
+    TURSO_AUTH_TOKEN = None
+
+# Render-specific settings
+RENDER_CONFIG = {
+    'disable_selenium': False,  # SELENIUM IS SUPPORTED ON RENDER!
+    'use_turso_db': True,
+    'port': int(os.environ.get('PORT', 5000)),
+    'host': '0.0.0.0',
+    'debug': False if IS_RENDER else True
+}
+
+# Feature toggles for Render (ALL FEATURES ENABLED!)
+FEATURES = {
+    'selenium_chatbot': True,   # ✅ Supported on Render
+    'web_stt': True,           # ✅ Supported on Render
+    'voice_features': True,     # ✅ Supported on Render
+    'browser_automation': True, # ✅ Supported on Render
+    'ai_chat': True,           # ✅ Supported
+    'translation': True,        # ✅ Supported
+    'progress_tracking': True,  # ✅ Supported
+    'user_management': True     # ✅ Supported
+}
+
+# Selenium configuration for Render
+SELENIUM_CONFIG = {
+    'headless': True,  # Always headless on Render
+    'chrome_options': [
+        '--headless',
+        '--no-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        '--window-size=1920,1080'
+    ]
+}
+
+# Learning levels and their topics (same as main config)
 LEVEL_TOPICS = {
     "1": [
         "greetings", "family", "about_me", "numbers", "appearance", 
@@ -27,7 +77,7 @@ LEVEL_TOPICS = {
     ]
 }
 
-# Topic details with names and translations
+# Topic details with names and translations (same as main config)
 TOPIC_DETAILS = {
     # Level 1
     'greetings': {'name': 'Greetings', 'farsi': 'احوالپرسی', 'emoji': '👋'},
@@ -93,162 +143,4 @@ TOPIC_DETAILS = {
     'academic_english': {'name': 'Academic English', 'farsi': 'انگلیسی آکادمیک', 'emoji': '🎓'},
     'professional_communication': {'name': 'Professional Communication', 'farsi': 'ارتباطات حرفه‌ای', 'emoji': '💻'},
     'advanced_grammar': {'name': 'Advanced Grammar', 'farsi': 'گرامر پیشرفته', 'emoji': '📖'}
-}
-
-# Conversation templates for different scenarios
-CONVERSATION_TEMPLATES = {
-    'introduction': {
-        'teacher_start': "Hello! I'm your English teacher. What's your name?",
-        'follow_ups': [
-            "Nice to meet you, {name}! How are you feeling today?",
-            "Where are you from, {name}?",
-            "How long have you been learning English?"
-        ]
-    },
-    'topic_introduction': {
-        'start': "Today we're going to talk about {topic}. Are you ready?",
-        'encouragement': [
-            "Great job!",
-            "That's correct!",
-            "Very good!",
-            "Excellent!",
-            "Well done!",
-            "Perfect!"
-        ],
-        'help': [
-            "Let me help you with that.",
-            "Here's another way to say it:",
-            "Try this instead:",
-            "Don't worry, let's practice together."
-        ]
-    },
-    'practice_scenarios': {
-        'restaurant': [
-            "You are at a restaurant. What would you like to order?",
-            "The waiter is asking about drinks. What do you say?",
-            "How do you ask for the bill?"
-        ],
-        'doctor': [
-            "You need to see a doctor. How do you explain your problem?",
-            "The doctor asks about your symptoms. What do you say?",
-            "How do you ask about medicine?"
-        ],
-        'grocery': [
-            "You're at the grocery store. How do you ask where something is?",
-            "You can't find what you need. What do you ask?",
-            "How do you ask about the price?"
-        ]
-    }
-}
-
-# Phrase packs for real-world scenarios
-PHRASE_PACKS = {
-    'essential_phrases': [
-        {'en': 'Excuse me', 'farsi': 'ببخشید'},
-        {'en': 'Thank you', 'farsi': 'متشکرم'},
-        {'en': 'Please', 'farsi': 'لطفاً'},
-        {'en': 'I\'m sorry', 'farsi': 'متأسفم'},
-        {'en': 'Help me', 'farsi': 'کمکم کنید'},
-    ],
-    'hospital': [
-        {'en': 'I need to see a doctor', 'farsi': 'من باید دکتر ببینم'},
-        {'en': 'Where is the emergency room?', 'farsi': 'اتاق اورژانس کجاست؟'},
-        {'en': 'I have insurance', 'farsi': 'من بیمه دارم'},
-        {'en': 'It hurts here', 'farsi': 'اینجا درد می‌کند'},
-        {'en': 'I need medicine', 'farsi': 'به دارو نیاز دارم'},
-    ],
-    'grocery': [
-        {'en': 'Where can I find bread?', 'farsi': 'نان را کجا می‌توانم پیدا کنم؟'},
-        {'en': 'How much does this cost?', 'farsi': 'این چقدر قیمت دارد؟'},
-        {'en': 'Do you have fresh vegetables?', 'farsi': 'سبزیجات تازه دارید؟'},
-        {'en': 'Can I pay with card?', 'farsi': 'می‌توانم با کارت پرداخت کنم؟'},
-        {'en': 'Where is the checkout?', 'farsi': 'صندوق فروش کجاست؟'},
-    ],
-    'school': [
-        {'en': 'How is my child doing?', 'farsi': 'فرزندم چطور پیش می‌رود؟'},
-        {'en': 'Does my child need extra help?', 'farsi': 'آیا فرزندم به کمک اضافی نیاز دارد؟'},
-        {'en': 'When are parent-teacher conferences?', 'farsi': 'جلسات والدین و معلمان کی است؟'},
-        {'en': 'What homework does my child have?', 'farsi': 'فرزندم چه تکالیفی دارد؟'},
-        {'en': 'Is my child participating in class?', 'farsi': 'آیا فرزندم در کلاس شرکت می‌کند؟'},
-    ],
-    'transportation': [
-        {'en': 'Where is the bus stop?', 'farsi': 'ایستگاه اتوبوس کجاست؟'},
-        {'en': 'How much is the fare?', 'farsi': 'کرایه چقدر است؟'},
-        {'en': 'Which bus goes to the city center?', 'farsi': 'کدام اتوبوس به مرکز شهر می‌رود؟'},
-        {'en': 'Is this the right platform?', 'farsi': 'آیا این سکوی درست است؟'},
-        {'en': 'When does the next train arrive?', 'farsi': 'قطار بعدی کی می‌رسد؟'},
-    ]
-}
-
-# Spaced repetition settings (SM-2 algorithm)
-SPACED_REPETITION_CONFIG = {
-    'initial_interval': 1,
-    'minimum_interval': 1,
-    'maximum_interval': 365,
-    'easy_factor': 2.5,
-    'minimum_factor': 1.3,
-    'factor_increment': 0.1,
-    'factor_decrement': 0.2
-}
-
-# Gamification settings
-GAMIFICATION_CONFIG = {
-    'points': {
-        'conversation_message': 2,
-        'correct_pronunciation': 5,
-        'topic_completion': 25,
-        'daily_challenge': 10,
-        'streak_bonus': 5
-    },
-    'badges': {
-        'first_conversation': {'name': 'First Steps', 'description': 'Started first conversation'},
-        'week_streak': {'name': 'Consistent Learner', 'description': '7 days in a row'},
-        'topic_master': {'name': 'Topic Master', 'description': 'Completed all topics in a level'},
-        'pronunciation_expert': {'name': 'Clear Speaker', 'description': '50 correct pronunciations'}
-    }
-}
-
-# Rate limiting configuration
-RATE_LIMIT_CONFIG = {
-    'requests_per_minute': 30,
-    'requests_per_hour': 200,
-    'requests_per_day': 1000,
-    'image_generation_per_hour': 10,
-    'ai_chat_per_minute': 10
-}
-
-# AI model configuration
-AI_CONFIG = {
-    'conversation_model': 'microsoft/DialoGPT-small',
-    'translation_model': 'Helsinki-NLP/opus-mt-en-fa',
-    'grammar_model': 'textattack/distilbert-base-uncased-CoLA',
-    'image_model': 'runwayml/stable-diffusion-v1-5',
-    'max_tokens': 512,
-    'temperature': 0.7
-}
-
-# Voice configuration
-VOICE_CONFIG = {
-    'sample_rate': 16000,
-    'channels': 1,
-    'chunk_size': 1024,
-    'supported_formats': ['wav', 'mp3', 'ogg'],
-    'max_duration': 30,  # seconds
-    'pronunciation_threshold': 0.7
-}
-
-# Image generation configuration
-IMAGE_CONFIG = {
-    'default_style': 'educational illustration',
-    'image_size': '512x512',
-    'quality': 'standard',
-    'max_images_per_session': 5
-}
-
-# Database configuration
-DATABASE_CONFIG = {
-    'name': 'database.db',
-    'backup_interval': 24,  # hours
-    'cleanup_old_conversations': 90,  # days
-    'max_conversation_length': 50  # messages
 }

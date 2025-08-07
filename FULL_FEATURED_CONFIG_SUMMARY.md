@@ -13,15 +13,15 @@ You've chosen to deploy with **ALL original features** including:
 ## ✅ Files Configured for Full Deployment:
 
 ### Core Application Files:
-- **`backend/app_render_full.py`** - Main Flask app with ALL features
-- **`config_render_full.py`** - Full configuration (all features enabled)
-- **`requirements_render_full.txt`** - Complete dependencies including Selenium
+- **`backend/app.py`** - Main Flask app with ALL features
+- **`backend/config.py`** - Full configuration (all features enabled)
+- **`requirements.txt`** - Complete dependencies including Selenium
 
 ### Deployment Configuration:
 - **`render.yaml`** - Configured for full version with Chrome installation
   ```yaml
-  startCommand: python backend/app_render_full.py
-  buildCommand: pip install -r requirements_render_full.txt
+  startCommand: python backend/app.py
+  buildCommand: pip install -r requirements.txt
   ```
 
 ### Database Service:
