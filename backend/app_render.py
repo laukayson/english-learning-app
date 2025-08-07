@@ -596,6 +596,111 @@ def get_features():
 def favicon():
     return '', 204
 
+# Debug endpoint for fixing user_progress table structure
+@app.route('/api/debug/fix-user-progress')
+def fix_user_progress_table():
+    """Fix the problematic user_progress table structure"""
+    fix_info = {
+        'timestamp': datetime.now().isoformat(),
+        'operations': []
+    }
+    
+    try:
+        # Step 1: Drop the problematic table completely
+        try:
+            db_service.execute_update("DROP TABLE IF EXISTS user_progress")
+            fix_info['operations'].append({
+                'step': 'drop_problematic_table',
+                'success': True,
+                'message': 'Dropped problematic user_progress table'
+            })
+        except Exception as e:
+            fix_info['operations'].append({
+                'step': 'drop_problematic_table',
+                'success': False,
+                'error': str(e)
+            })
+        
+        # Step 2: Create simplified table without foreign keys or complex features
+        try:
+            # Simplified structure - no AUTOINCREMENT, no FOREIGN KEY
+            create_query = '''
+            CREATE TABLE user_progress (
+                user_id TEXT NOT NULL,
+                level INTEGER DEFAULT 1,
+                experience_points INTEGER DEFAULT 0,
+                total_experience INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id)
+            )
+            '''
+            db_service.execute_update(create_query)
+            fix_info['operations'].append({
+                'step': 'create_simplified_table',
+                'success': True,
+                'message': 'Created simplified user_progress table (no AUTOINCREMENT, no FOREIGN KEY)'
+            })
+        except Exception as e:
+            fix_info['operations'].append({
+                'step': 'create_simplified_table',
+                'success': False,
+                'error': str(e)
+            })
+        
+        # Step 3: Test SELECT on new table
+        try:
+            result = db_service.execute_query("SELECT COUNT(*) as count FROM user_progress")
+            fix_info['operations'].append({
+                'step': 'test_select',
+                'success': True,
+                'message': f'SELECT test successful, count: {result[0]["count"] if result else 0}'
+            })
+        except Exception as e:
+            fix_info['operations'].append({
+                'step': 'test_select',
+                'success': False,
+                'error': str(e)
+            })
+        
+        # Step 4: Test INSERT on new table
+        try:
+            test_user_id = 'test_user_fix'
+            db_service.execute_update(
+                "INSERT OR REPLACE INTO user_progress (user_id, level, experience_points, total_experience, created_at) VALUES (?, ?, ?, ?, ?)",
+                (test_user_id, 1, 0, 0, datetime.now().isoformat())
+            )
+            fix_info['operations'].append({
+                'step': 'test_insert',
+                'success': True,
+                'message': 'INSERT test successful'
+            })
+            
+            # Test SELECT after INSERT
+            select_result = db_service.execute_query("SELECT * FROM user_progress WHERE user_id = ?", (test_user_id,))
+            fix_info['operations'].append({
+                'step': 'test_select_after_insert',
+                'success': True,
+                'message': f'SELECT after INSERT successful: {select_result}'
+            })
+            
+            # Clean up test data
+            db_service.execute_update("DELETE FROM user_progress WHERE user_id = ?", (test_user_id,))
+            
+        except Exception as e:
+            fix_info['operations'].append({
+                'step': 'test_insert',
+                'success': False,
+                'error': str(e)
+            })
+        
+        fix_info['overall_success'] = all(op.get('success', False) for op in fix_info['operations'])
+        
+    except Exception as e:
+        fix_info['overall_error'] = str(e)
+        fix_info['overall_success'] = False
+    
+    return jsonify(fix_info)
+
 # Debug endpoint for database repair
 @app.route('/api/debug/repair-db')
 def repair_database():
