@@ -21,14 +21,27 @@ class TursoService:
         self.database_url = database_url or os.environ.get('TURSO_DATABASE_URL')
         self.auth_token = auth_token or os.environ.get('TURSO_AUTH_TOKEN')
         self.client = None
-        self.is_turso = self.database_url and self.database_url.startswith('libsql://')
+        
+        # Check if this is a Turso database (either libsql:// or https:// format)
+        self.is_turso = bool(
+            self.database_url and (
+                self.database_url.startswith('libsql://') or 
+                (self.database_url.startswith('https://') and 'turso.io' in self.database_url)
+            )
+        )
         
         # Debug logging for Turso configuration
         logger.info(f"Initializing database service - Turso: {self.is_turso}")
         logger.info(f"Database URL present: {bool(self.database_url)}")
         logger.info(f"Auth token present: {bool(self.auth_token)}")
         if self.database_url:
-            logger.info(f"Database URL starts with libsql://: {self.database_url.startswith('libsql://')}")
+            logger.info(f"Database URL format: {self.database_url[:50]}...")
+            if self.database_url.startswith('libsql://'):
+                logger.info("Database URL format: libsql (Turso WebSocket)")
+            elif self.database_url.startswith('https://') and 'turso.io' in self.database_url:
+                logger.info("Database URL format: https (Turso HTTP)")
+            else:
+                logger.info("Database URL format: other/sqlite")
         
         if self.is_turso and TURSO_AVAILABLE:
             logger.info("Turso client available, attempting connection...")
@@ -49,38 +62,66 @@ class TursoService:
             logger.info(f"Database URL: {self.database_url[:50]}...")
             logger.info(f"Auth token length: {len(self.auth_token) if self.auth_token else 0}")
             
-            # Try different client creation approaches
+            # Try different client creation approaches, prioritizing HTTP
             import asyncio
             
-            # Method 1: Try creating sync client if available
-            try:
-                if hasattr(libsql_client, 'create_client_sync'):
-                    self.client = libsql_client.create_client_sync(
+            # Method 1: If already HTTPS, use directly
+            if self.database_url.startswith('https://'):
+                try:
+                    logger.info("Using HTTPS URL directly...")
+                    self.client = libsql_client.create_client(
                         url=self.database_url,
                         auth_token=self.auth_token
                     )
-                    logger.info("✅ Created Turso sync client")
-                else:
-                    raise AttributeError("sync client not available")
-            except (AttributeError, Exception) as sync_error:
-                logger.info(f"Sync client failed: {sync_error}, trying regular client...")
-                
-                # Method 2: Create event loop if none exists
+                    logger.info("✅ Created Turso client with HTTPS URL")
+                except Exception as https_error:
+                    logger.warning(f"HTTPS client failed: {https_error}")
+                    raise https_error
+            
+            # Method 2: Convert libsql:// to HTTPS and try HTTP-based connection
+            elif self.database_url.startswith('libsql://'):
                 try:
-                    loop = asyncio.get_event_loop()
-                    logger.info("Using existing event loop")
-                except RuntimeError:
-                    # No event loop, create one
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    logger.info("Created new event loop for Turso")
-                
-                # Method 3: Create regular client with event loop
-                self.client = libsql_client.create_client(
-                    url=self.database_url,
-                    auth_token=self.auth_token
-                )
-                logger.info("✅ Created Turso regular client with event loop")
+                    # Convert WebSocket URL to HTTP
+                    http_url = self.database_url.replace('libsql://', 'https://')
+                    logger.info(f"Converting to HTTPS URL: {http_url[:50]}...")
+                    
+                    self.client = libsql_client.create_client(
+                        url=http_url,
+                        auth_token=self.auth_token
+                    )
+                    logger.info("✅ Created Turso client with converted HTTPS URL")
+                except Exception as convert_error:
+                    logger.warning(f"HTTPS conversion failed: {convert_error}")
+                    
+                    # Method 3: Try sync client with original WebSocket URL
+                    try:
+                        if hasattr(libsql_client, 'create_client_sync'):
+                            self.client = libsql_client.create_client_sync(
+                                url=self.database_url,
+                                auth_token=self.auth_token
+                            )
+                            logger.info("✅ Created Turso sync client")
+                        else:
+                            raise AttributeError("sync client not available")
+                    except (AttributeError, Exception) as sync_error:
+                        logger.warning(f"Sync client failed: {sync_error}")
+                        
+                        # Method 4: Create event loop and try regular WebSocket client
+                        try:
+                            loop = asyncio.get_event_loop()
+                            logger.info("Using existing event loop")
+                        except RuntimeError:
+                            # No event loop, create one
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            logger.info("Created new event loop for Turso")
+                        
+                        # Final attempt with WebSocket
+                        self.client = libsql_client.create_client(
+                            url=self.database_url,
+                            auth_token=self.auth_token
+                        )
+                        logger.info("✅ Created Turso regular client with event loop")
             
             # Test the connection with a simple query
             try:
@@ -93,11 +134,12 @@ class TursoService:
                 logger.warning(f"Turso connection test failed: {test_error}")
                 logger.warning(f"Error type: {type(test_error).__name__}")
                 
-                # If it's a WebSocket error, it might be a network/firewall issue on Render
+                # If it's a WebSocket error, provide specific guidance
                 if "WSServerHandshakeError" in str(type(test_error)) or "505" in str(test_error):
-                    logger.error("❌ WebSocket handshake failed - possible network/firewall issue on Render")
-                    logger.error("This is often caused by Render's network restrictions or Turso region issues")
-                    logger.error("Consider using a different Turso region or checking firewall rules")
+                    logger.error("❌ WebSocket handshake failed - Render network restriction confirmed")
+                    logger.error("Render free tier blocks WebSocket connections to external services")
+                    logger.error("Solution: Use HTTPS format in TURSO_DATABASE_URL instead of libsql://")
+                    logger.error("Example: https://your-db.turso.io instead of libsql://your-db.turso.io")
                 
                 raise test_error
                 
@@ -106,8 +148,9 @@ class TursoService:
             logger.error(f"Error type: {type(e).__name__}")
             logger.error(f"Error details: {str(e)}")
             
-            # For deployment, we'll fall back to SQLite but keep trying Turso
-            logger.warning("🔄 Falling back to SQLite but will retry Turso connection periodically")
+            # For deployment, we'll fall back to SQLite
+            logger.warning("🔄 Falling back to SQLite - Use HTTPS URL format to resolve Turso connection")
+            logger.warning("Change TURSO_DATABASE_URL from libsql:// to https:// format in Render environment")
             self._fallback_to_sqlite()
             return False
     
