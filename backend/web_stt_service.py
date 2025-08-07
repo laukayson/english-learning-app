@@ -437,7 +437,7 @@ class SpeechTexterSTT:
         try:
             logger.debug("🔍 Checking entire page body for any text changes...")
             page_text = self.driver.find_element(By.TAG_NAME, "body").text
-            if page_text:
+            if page_text and isinstance(page_text, str):
                 # Look for recent text that might be transcription
                 lines = page_text.split('\n')
                 for line in lines[-10:]:  # Check last 10 lines

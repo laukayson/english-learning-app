@@ -208,11 +208,13 @@ Click "Environment" tab and add these variables:
 | Key | Value | Notes |
 |-----|-------|-------|
 | `TURSO_DATABASE_URL` | `libsql://your-db-url` | From Step 1.3 |
-| `TURSO_AUTH_TOKEN` | `your-auth-token` | From Step 1.3 |
+| `TURSO_AUTH_TOKEN` | `your-auth-token` | From Step 1.3 - **SECURE TOKEN** |
 | `FLASK_ENV` | `production` | Sets Flask to production mode |
 | `PORT` | `10000` | Render's default port |
 | `RENDER` | `true` | Enables Render-specific features |
 | `SELENIUM_HEADLESS` | `true` | Runs browser automation headlessly |
+
+**🔐 IMPORTANT**: Keep your `TURSO_AUTH_TOKEN` secure! This token provides full read/write access to your database.
 
 ### 4.5 Deploy!
 1. Click "Create Web Service"
