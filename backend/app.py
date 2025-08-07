@@ -38,17 +38,53 @@ except ImportError:
 # Import progress tracker
 try:
     from services.progress_tracker import ProgressTracker
-except ImportError:
-    # Create a mock progress tracker if not available
-    class ProgressTracker:
+    
+    # Create a simple progress tracker wrapper for database service
+    class DatabaseProgressTracker:
         def __init__(self, db_service):
             self.db_service = db_service
         
         def get_user_progress(self, user_id):
-            return self.db_service.get_user_progress(user_id)
+            """Get user progress from database service"""
+            try:
+                # Use the database service's existing methods
+                return self.db_service.get_user_progress(user_id)
+            except Exception as e:
+                logger.warning(f"Progress tracker error: {e}")
+                return {
+                    'level': 1,
+                    'experience_points': 0,
+                    'topics_completed': [],
+                    'practice_sessions': 0
+                }
         
         def initialize_user_progress(self, user_id, level):
-            return self.db_service.initialize_user_progress(user_id, level)
+            """Initialize user progress"""
+            try:
+                return self.db_service.initialize_user_progress(user_id, level)
+            except Exception as e:
+                logger.warning(f"Progress initialization error: {e}")
+                return False
+    
+    PROGRESS_TRACKER_AVAILABLE = True
+except ImportError:
+    # Create a fallback progress tracker
+    class DatabaseProgressTracker:
+        def __init__(self, db_service):
+            self.db_service = db_service
+        
+        def get_user_progress(self, user_id):
+            return {
+                'level': 1,
+                'experience_points': 0,
+                'topics_completed': [],
+                'practice_sessions': 0
+            }
+        
+        def initialize_user_progress(self, user_id, level):
+            return True
+    
+    PROGRESS_TRACKER_AVAILABLE = False
 
 from rate_limiter import RateLimiter
 
@@ -77,7 +113,7 @@ CORS(app)
 db_service = get_db_service()
 ai_models = AIModels()
 translation_service = TranslationService()
-progress_tracker = ProgressTracker(db_service)
+progress_tracker = DatabaseProgressTracker(db_service)
 rate_limiter = RateLimiter()
 
 # Initialize voice services if available

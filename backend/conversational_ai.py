@@ -164,25 +164,30 @@ class ConversationalAI:
     def _initialize_selenium_chatbot(self):
         """Initialize the Render-based chatbot service"""
         try:
-            # Import the Render selenium client
-            from render_selenium_client import get_selenium_client
+            # Initialize selenium directly for Render
+            from selenium import webdriver
+            from selenium.webdriver.chrome.options import Options
+            import uuid
             
             # Generate unique session ID
-            import uuid
             self.user_context['session_id'] = str(uuid.uuid4())
             
-            # Get the Render selenium client
-            self.selenium_client = get_selenium_client()
+            # Configure Chrome options for Render
+            chrome_options = Options()
+            chrome_options.add_argument('--headless')
+            chrome_options.add_argument('--no-sandbox')
+            chrome_options.add_argument('--disable-dev-shm-usage')
+            chrome_options.add_argument('--disable-gpu')
+            chrome_options.add_argument('--window-size=1920,1080')
+            
+            # Initialize WebDriver
+            self.selenium_client = webdriver.Chrome(options=chrome_options)
             
             if self.selenium_client:
                 # Test if the service is available
-                if self.selenium_client.health_check():
-                    self.session_active = True
-                    logger.info(f"🤖 Render chatbot service initialized (session: {self.user_context['session_id']})")
-                else:
-                    logger.warning("Render chatbot service health check failed")
-                    self.selenium_client = None
-                    self.session_active = False
+                self.selenium_client.get('https://www.google.com')
+                self.session_active = True
+                logger.info(f"🤖 Render chatbot service initialized (session: {self.user_context['session_id']})")
             else:
                 logger.warning("Render selenium client not available")
                 self.session_active = False

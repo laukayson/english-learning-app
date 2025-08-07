@@ -2,6 +2,7 @@
 import os
 import json
 import logging
+import sqlite3
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
@@ -10,7 +11,6 @@ try:
     TURSO_AVAILABLE = True
 except ImportError:
     TURSO_AVAILABLE = False
-    import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +35,20 @@ class TursoService:
     def _init_turso(self):
         """Initialize Turso client"""
         try:
+            # Try to initialize client - fallback to sqlite if async issues occur
             self.client = libsql_client.create_client(
                 url=self.database_url,
                 auth_token=self.auth_token
             )
-            logger.info("✅ Connected to Turso database")
+            
+            # Test the connection with a simple query
+            try:
+                self.client.execute("SELECT 1")
+                logger.info("✅ Connected to Turso database")
+            except Exception as test_error:
+                logger.warning(f"Turso connection test failed: {test_error}")
+                raise test_error
+                
         except Exception as e:
             logger.error(f"❌ Failed to connect to Turso: {e}")
             self._fallback_to_sqlite()
