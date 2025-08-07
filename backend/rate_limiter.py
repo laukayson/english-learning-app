@@ -38,19 +38,19 @@ class RateLimiter:
                 'requests_per_day': 50
             },
             'voice_processing': {
-                'requests_per_minute': 15,
-                'requests_per_hour': 150,
-                'requests_per_day': 800
+                'requests_per_minute': 60,
+                'requests_per_hour': 500,
+                'requests_per_day': 2000
             }
         }
         
         # Blocking configuration
         self.block_durations = {
-            1: 60,      # 1 minute for first violation
-            2: 300,     # 5 minutes for second violation
-            3: 900,     # 15 minutes for third violation
-            4: 3600,    # 1 hour for fourth violation
-            5: 86400    # 24 hours for fifth+ violations
+            1: 10,      # 10 seconds for first violation
+            2: 30,      # 30 seconds for second violation
+            3: 60,      # 1 minute for third violation
+            4: 300,     # 5 minutes for fourth violation
+            5: 900      # 15 minutes for fifth+ violations
         }
         
         # Start cleanup thread

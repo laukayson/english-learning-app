@@ -35,21 +35,19 @@ class ConversationalAI:
             'greeting': {
                 'patterns': [r'\b(hi|hello|hey|good morning|good afternoon|good evening)\b'],
                 'responses': [
-                    # "Hello! I'm so glad you're here to practice English with me. What would you like to talk about today?",
-                    # "Hi there! Welcome to our English conversation session. How are you feeling about practicing today?",
-                    # "Good to see you! I'm excited to help you improve your English. What's on your mind?",
-                    # "Hello! It's wonderful that you're taking time to practice English. What topic interests you most?"
-                    "Selenium chatbot unavailable - fallback greeting response"
+                    "Hello! I'm so glad you're here to practice English with me. What would you like to talk about today?",
+                    "Hi there! Welcome to our English conversation session. How are you feeling about practicing today?",
+                    "Good to see you! I'm excited to help you improve your English. What's on your mind?",
+                    "Hello! It's wonderful that you're taking time to practice English. What topic interests you most?"
                 ]
             },
             'how_are_you': {
                 'patterns': [r'\b(how are you|how do you do|how have you been)\b'],
                 'responses': [
-                    # "I'm doing great, thank you for asking! I'm here and ready to help you practice English. How are you doing today?",
-                    # "I'm wonderful! I love helping people learn English. How are you feeling about your English learning journey?",
-                    # "I'm doing well, thanks! I'm always excited when someone wants to practice conversation. How has your day been?",
-                    # "I'm fantastic! Every conversation helps me understand how to better help learners like you. How are you today?"
-                    "Selenium chatbot unavailable - fallback how are you response"
+                    "I'm doing great, thank you for asking! I'm here and ready to help you practice English. How are you doing today?",
+                    "I'm wonderful! I love helping people learn English. How are you feeling about your English learning journey?",
+                    "I'm doing well, thanks! I'm always excited when someone wants to practice conversation. How has your day been?",
+                    "I'm fantastic! Every conversation helps me understand how to better help learners like you. How are you today?"
                 ]
             },
             'name_asking': {
@@ -58,7 +56,7 @@ class ConversationalAI:
                     # "I'm your AI English tutor! You can call me Teacher or just AI. I'm here to help you practice conversation in English. What's your name?",
                     # "I'm an AI language teacher designed to help you practice English conversation. You can call me whatever feels comfortable! What should I call you?",
                     # "I'm your conversational English practice partner! I don't have a specific name, but I'm here to help you learn. What would you like me to call you?"
-                    "Selenium chatbot unavailable - fallback name response"
+                    "I'd love to get to know you better! What name would you like me to call you during our English practice sessions?"
                 ]
             },
             'learning_intent': {
@@ -68,7 +66,7 @@ class ConversationalAI:
                     # "I love your motivation to learn! English can be challenging but very rewarding. What's your biggest goal with English right now?",
                     # "Excellent attitude! Practice is the key to improving English. What situations do you most want to use English in?",
                     # "That's wonderful to hear! Everyone learns differently. What kind of English practice do you find most helpful?"
-                    "Selenium chatbot unavailable - fallback learning response"
+                    "That's wonderful that you're interested in learning! What aspect of English would you like to focus on today - speaking, vocabulary, or conversation skills?"
                 ]
             },
             'difficulty_expressing': {
@@ -78,7 +76,7 @@ class ConversationalAI:
                     # "It's completely normal to find English difficult. You're doing great by practicing! Can you tell me what part is most confusing?",
                     # "Many English learners feel this way - you're not alone! The important thing is that you're trying. What would help you feel more confident?",
                     # "I appreciate you sharing that with me. English has many tricky parts, but with practice it gets easier. What would you like to work on together?"
-                    "Selenium chatbot unavailable - fallback difficulty response"
+                    "Don't worry about difficulty - everyone learns at their own pace! Let's start with something comfortable. What topics do you enjoy talking about in your daily life?"
                 ]
             },
             'positive_response': {
@@ -88,7 +86,7 @@ class ConversationalAI:
                     # "That's wonderful! When we enjoy something, we learn it much faster. What made this experience positive for you?",
                     # "Excellent! I can hear the enthusiasm in your words. What other topics or activities interest you in English?",
                     # "That's fantastic to hear! Your excitement about learning English is inspiring. What would you like to explore next?"
-                    "Selenium chatbot unavailable - fallback positive response"
+                    "I'm so glad to hear that! Your positive attitude will really help your English learning. What would you like to talk about today?"
                 ]
             },
             'asking_questions': {
@@ -98,7 +96,7 @@ class ConversationalAI:
                     # "That's an excellent thing to ask about! Questions show you're really thinking about English.",
                     # "I'm glad you asked! That's exactly the kind of thinking that will help you improve your English.",
                     # "What a thoughtful question! This is how we learn - by being curious and asking for clarification."
-                    "Selenium chatbot unavailable - fallback question response"
+                    "Great question! I'm here to help you practice English conversation. What topics or situations would you like to practice talking about?"
                 ]
             },
             'sharing_personal': {
@@ -108,7 +106,7 @@ class ConversationalAI:
                     # "I really appreciate you telling me about yourself! Sharing personal stories is one of the best ways to practice natural English conversation.",
                     # "That's fascinating! When we talk about things that matter to us, it helps us practice English in a meaningful way.",
                     # "I love hearing about your experiences! This kind of personal sharing really helps develop conversational English skills."
-                    "Selenium chatbot unavailable - fallback personal sharing response"
+                    "Thank you for sharing that with me! I'd love to hear more. Can you tell me a bit more about your interests or experiences?"
                 ]
             },
             'fallback': {
@@ -122,7 +120,7 @@ class ConversationalAI:
                     # "Your English communication is really developing well! What are your thoughts on this subject?",
                     # "That's a thoughtful way to put it! I'm curious to know what you think about this from your perspective.",
                     # "You're expressing yourself clearly in English! How do you feel about discussing topics like this?"
-                    "Selenium chatbot unavailable - fallback general response"
+                    "That's interesting! I'd love to help you practice talking about that. Can you tell me more about your thoughts on this topic?"
                 ]
             }
         }
@@ -133,31 +131,31 @@ class ConversationalAI:
                 # "Family is so important! Tell me about your family. Who are the most important people in your life?",
                 # "I'd love to hear about your family. What traditions does your family have that are special to you?",
                 # "Family relationships can be so interesting! How would you describe your family to someone new?"
-                "Selenium chatbot unavailable - family topic fallback"
+                "Family is such a wonderful topic! Tell me about your family - do you have siblings, parents, or other relatives you're close with?"
             ],
             'work': [
                 # "Work is such a big part of our lives! What kind of work do you do, or what would you like to do?",
                 # "I'm curious about your work experience. What's the most interesting part of your job or studies?",
                 # "Career goals can be exciting to discuss! What are your hopes for your professional future?"
-                "Selenium chatbot unavailable - work topic fallback"
+                "Work is something we all have experience with! What kind of work do you do, or what type of career are you interested in?"
             ],
             'hobbies': [
                 # "Hobbies make life more enjoyable! What do you like to do in your free time?",
                 # "I love hearing about people's interests! What activities bring you the most joy?",
                 # "Free time activities tell us so much about a person! What are you passionate about?"
-                "Selenium chatbot unavailable - hobbies topic fallback"
+                "Hobbies are such a great way to practice English! What activities do you enjoy doing in your free time?"
             ],
             'culture': [
                 # "Culture is so fascinating! What aspects of your culture are you most proud of?",
                 # "I'm always interested in learning about different cultures. What would you want others to know about your background?",
                 # "Cultural exchange is wonderful! What traditions from your culture do you think others would find interesting?"
-                "Selenium chatbot unavailable - culture topic fallback"
+                "Culture is fascinating! I'd love to learn about your culture or hear about other cultures that interest you. What would you like to share?"
             ],
             'food': [
                 # "Food brings people together! What are some of your favorite dishes from your culture?",
                 # "I love learning about different cuisines! What food from your country would you recommend to a friend?",
                 # "Cooking and eating are such universal experiences! What role does food play in your family or culture?"
-                "Selenium chatbot unavailable - food topic fallback"
+                "Food is one of my favorite topics! What's your favorite type of cuisine, or do you enjoy cooking?"
             ]
         }
     

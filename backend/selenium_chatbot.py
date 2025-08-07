@@ -44,6 +44,20 @@ class SeleniumChatbot:
             
             # Set up Chrome options - Configurable headless mode for debugging
             options = Options()
+            
+            # Detect Chrome binary on Render
+            import shutil
+            chrome_binary = None
+            for binary_name in ['google-chrome-stable', 'google-chrome', 'chromium-browser', 'chromium']:
+                chrome_binary = shutil.which(binary_name)
+                if chrome_binary:
+                    logger.info(f"✅ Found Chrome binary: {chrome_binary}")
+                    options.binary_location = chrome_binary
+                    break
+            
+            if not chrome_binary:
+                logger.warning("⚠️ No Chrome binary found - using default")
+            
             if self.headless:
                 options.add_argument("--headless")
                 logger.info("AI Chatbot browser running in headless mode (no window will appear)")
