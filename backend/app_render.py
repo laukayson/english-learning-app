@@ -596,6 +596,95 @@ def get_features():
 def favicon():
     return '', 204
 
+# Debug endpoint for testing Chrome installation
+@app.route('/api/debug/chrome')
+def debug_chrome():
+    """Debug endpoint to check Chrome installation status"""
+    import subprocess
+    import shutil
+    
+    debug_info = {
+        'timestamp': datetime.now().isoformat(),
+        'chrome_tests': []
+    }
+    
+    # Test 1: Check for Chrome binaries
+    chrome_paths = [
+        '/usr/bin/google-chrome',
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/usr/local/bin/google-chrome',
+        '/usr/local/bin/chrome',
+        '/usr/local/bin/chromium'
+    ]
+    
+    for path in chrome_paths:
+        try:
+            if os.path.exists(path):
+                debug_info['chrome_tests'].append({
+                    'path': path,
+                    'exists': True,
+                    'executable': os.access(path, os.X_OK)
+                })
+            else:
+                debug_info['chrome_tests'].append({
+                    'path': path,
+                    'exists': False,
+                    'executable': False
+                })
+        except Exception as e:
+            debug_info['chrome_tests'].append({
+                'path': path,
+                'error': str(e)
+            })
+    
+    # Test 2: Check command availability
+    commands = ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser']
+    for cmd in commands:
+        try:
+            path = shutil.which(cmd)
+            debug_info['chrome_tests'].append({
+                'command': cmd,
+                'which_path': path,
+                'available': path is not None
+            })
+        except Exception as e:
+            debug_info['chrome_tests'].append({
+                'command': cmd,
+                'error': str(e)
+            })
+    
+    # Test 3: Try to get Chrome version
+    for cmd in ['google-chrome-stable', 'google-chrome', 'chromium-browser', 'chromium']:
+        try:
+            result = subprocess.run([cmd, '--version'], 
+                                  capture_output=True, text=True, timeout=10)
+            debug_info['chrome_tests'].append({
+                'version_test': cmd,
+                'success': result.returncode == 0,
+                'output': result.stdout.strip(),
+                'error': result.stderr.strip()
+            })
+            if result.returncode == 0:
+                break  # Found working Chrome
+        except Exception as e:
+            debug_info['chrome_tests'].append({
+                'version_test': cmd,
+                'error': str(e)
+            })
+    
+    # Test 4: Environment variables
+    debug_info['environment'] = {
+        'GOOGLE_CHROME_BIN': os.environ.get('GOOGLE_CHROME_BIN'),
+        'CHROMEDRIVER_PATH': os.environ.get('CHROMEDRIVER_PATH'),
+        'PATH': os.environ.get('PATH'),
+        'RENDER': os.environ.get('RENDER'),
+        'SELENIUM_HEADLESS': os.environ.get('SELENIUM_HEADLESS')
+    }
+    
+    return jsonify(debug_info)
+
 # Debug endpoint for testing database queries
 @app.route('/api/debug/db')
 def debug_database():
