@@ -226,15 +226,39 @@ class TursoService:
                         try:
                             # Extract column names - columns should be a tuple of strings
                             columns = []
-                            if result.columns:
-                                columns = list(result.columns)
-                                logger.debug(f"Extracted columns: {columns}")
+                            try:
+                                if result.columns:
+                                    columns = list(result.columns)
+                                    logger.debug(f"Extracted columns: {columns}")
+                            except (KeyError, AttributeError, TypeError) as col_error:
+                                logger.warning(f"Column access error: {col_error}")
+                                # Try alternative access methods
+                                try:
+                                    if hasattr(result, '__getitem__') and 'columns' in result:
+                                        columns = list(result['columns'])
+                                    elif hasattr(result, 'get'):
+                                        columns = list(result.get('columns', []))
+                                except Exception as alt_col_error:
+                                    logger.warning(f"Alternative column access failed: {alt_col_error}")
+                                    columns = []
                             
                             # Extract rows data
                             rows = []
-                            if result.rows:
-                                rows = list(result.rows)
-                                logger.debug(f"Extracted {len(rows)} rows")
+                            try:
+                                if result.rows:
+                                    rows = list(result.rows)
+                                    logger.debug(f"Extracted {len(rows)} rows")
+                            except (KeyError, AttributeError, TypeError) as row_error:
+                                logger.warning(f"Row access error: {row_error}")
+                                # Try alternative access methods
+                                try:
+                                    if hasattr(result, '__getitem__') and 'rows' in result:
+                                        rows = list(result['rows'])
+                                    elif hasattr(result, 'get'):
+                                        rows = list(result.get('rows', []))
+                                except Exception as alt_row_error:
+                                    logger.warning(f"Alternative row access failed: {alt_row_error}")
+                                    rows = []
                             
                             # Create result dictionaries
                             if columns and rows:
@@ -255,10 +279,7 @@ class TursoService:
                             logger.error(f"Parse error type: {type(parse_error)}")
                             logger.error(f"Result type: {type(result)}")
                             logger.error(f"Result attributes: {dir(result)}")
-                            if hasattr(result, 'columns'):
-                                logger.error(f"Columns: {result.columns}, type: {type(result.columns)}")
-                            if hasattr(result, 'rows'):
-                                logger.error(f"Rows: {result.rows}, type: {type(result.rows)}")
+                            logger.error(f"Result repr: {repr(result)}")
                             return []
                     
                     else:
@@ -270,7 +291,28 @@ class TursoService:
                     logger.error(f"Turso execution error: {turso_error}")
                     logger.error(f"Turso error type: {type(turso_error)}")
                     logger.error(f"Turso error args: {turso_error.args if hasattr(turso_error, 'args') else 'No args'}")
-                    raise turso_error
+                    
+                    # Check if this is a "table doesn't exist" error
+                    error_msg = str(turso_error).lower()
+                    if 'table' in error_msg and ('not exist' in error_msg or 'no such table' in error_msg):
+                        logger.error(f"❌ Table doesn't exist error detected for query: {query[:100]}")
+                        logger.error("🔧 Attempting to recreate tables...")
+                        self._create_tables()
+                        logger.info("✅ Tables recreated, retrying query...")
+                        
+                        # Retry the query once after recreating tables
+                        try:
+                            if params:
+                                params_list = list(params) if isinstance(params, tuple) else params
+                                result = self.client.execute(query, params_list)
+                            else:
+                                result = self.client.execute(query)
+                            logger.info("✅ Query succeeded after table recreation")
+                        except Exception as retry_error:
+                            logger.error(f"❌ Query still failed after table recreation: {retry_error}")
+                            raise retry_error
+                    else:
+                        raise turso_error
                         
             else:
                 # SQLite handling
