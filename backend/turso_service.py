@@ -292,6 +292,18 @@ class TursoService:
                     logger.error(f"Turso error type: {type(turso_error)}")
                     logger.error(f"Turso error args: {turso_error.args if hasattr(turso_error, 'args') else 'No args'}")
                     
+                    # Special handling for KeyError: 'result' 
+                    if isinstance(turso_error, KeyError) and str(turso_error) == "'result'":
+                        logger.error(f"🔍 DETECTED KEYERROR 'result' - This is the problematic error!")
+                        logger.error(f"🔍 Query that caused it: {query[:100]}...")
+                        logger.error(f"🔍 Params: {params}")
+                        logger.error(f"🔍 This suggests a bug in libsql_client library")
+                        
+                        # Instead of re-raising, let's return empty result to trigger fallback
+                        logger.warning(f"🔄 Returning empty result to trigger fallback logic")
+                        # Don't re-raise the error, let the calling code handle empty results
+                        return []
+                    
                     # Check if this is a "table doesn't exist" error
                     error_msg = str(turso_error).lower()
                     if 'table' in error_msg and ('not exist' in error_msg or 'no such table' in error_msg):
@@ -355,6 +367,18 @@ class TursoService:
                     logger.error(f"Turso update execution error: {turso_error}")
                     logger.error(f"Turso update error type: {type(turso_error)}")
                     logger.error(f"Turso update error args: {turso_error.args if hasattr(turso_error, 'args') else 'No args'}")
+                    
+                    # Special handling for KeyError: 'result' in updates
+                    if isinstance(turso_error, KeyError) and str(turso_error) == "'result'":
+                        logger.error(f"🔍 DETECTED KEYERROR 'result' in UPDATE - This is the problematic error!")
+                        logger.error(f"🔍 Update query that caused it: {query[:100]}...")
+                        logger.error(f"🔍 Params: {params}")
+                        logger.error(f"🔍 This suggests a bug in libsql_client library")
+                        
+                        # Return False to indicate update failed, let calling code handle fallback
+                        logger.warning(f"🔄 Returning False to trigger fallback logic")
+                        return False
+                    
                     raise turso_error
                     
             else:
@@ -484,6 +508,8 @@ class TursoService:
     # Progress tracking methods
     def get_user_progress(self, user_id: str) -> Dict:
         """Get user's learning progress - with fallback for problematic table"""
+        logger.debug(f"Getting user progress for: {user_id}")
+        
         # Try to get from user_progress table first
         try:
             query = '''
@@ -492,17 +518,25 @@ class TursoService:
                 WHERE user_id = ? 
                 LIMIT 1
             '''
+            logger.debug(f"Attempting user_progress table query...")
             results = self.execute_query(query, (user_id,))
+            logger.debug(f"user_progress query succeeded: {results}")
             
             if results:
                 return results[0]
             else:
-                # No existing progress, create default
-                self.initialize_user_progress(user_id, 1)
-                return {'level': 1, 'experience_points': 0, 'total_experience': 0}
+                # No existing progress, try to create default
+                logger.debug(f"No existing progress found, initializing...")
+                if self.initialize_user_progress(user_id, 1):
+                    return {'level': 1, 'experience_points': 0, 'total_experience': 0}
+                else:
+                    # If initialization failed, use fallback
+                    raise Exception("Progress initialization failed")
                 
         except Exception as progress_error:
-            logger.warning(f"user_progress table access failed: {progress_error}")
+            logger.warning(f"❌ user_progress table access failed: {progress_error}")
+            logger.warning(f"🔄 Switching to fallback progress storage...")
+            
             # Fallback: store progress in user settings JSON field
             try:
                 user = self.get_user_by_id(user_id)
@@ -510,15 +544,31 @@ class TursoService:
                     import json
                     settings = json.loads(user['settings'])
                     progress = settings.get('progress', {'level': 1, 'experience_points': 0, 'total_experience': 0})
-                    logger.info(f"Using fallback progress from user settings: {progress}")
+                    logger.info(f"✅ Using fallback progress from user settings: {progress}")
                     return progress
                 else:
-                    # Return default progress
+                    # Return default progress and try to store it
                     default_progress = {'level': 1, 'experience_points': 0, 'total_experience': 0}
-                    logger.info(f"Using default progress: {default_progress}")
+                    logger.info(f"✅ Using default progress (will store in settings): {default_progress}")
+                    
+                    # Try to store default progress in settings
+                    try:
+                        import json
+                        if user:
+                            settings = json.loads(user.get('settings', '{}'))
+                            settings['progress'] = default_progress
+                            settings_json = json.dumps(settings)
+                            
+                            update_query = 'UPDATE users SET settings = ? WHERE id = ?'
+                            self.execute_update(update_query, (settings_json, user_id))
+                            logger.info(f"✅ Stored default progress in user settings")
+                    except Exception as store_error:
+                        logger.warning(f"Could not store default progress: {store_error}")
+                    
                     return default_progress
+                    
             except Exception as fallback_error:
-                logger.error(f"Fallback progress retrieval failed: {fallback_error}")
+                logger.error(f"❌ Fallback progress retrieval failed: {fallback_error}")
                 return {'level': 1, 'experience_points': 0, 'total_experience': 0}
     
     def initialize_user_progress(self, user_id: str, level: int) -> bool:
