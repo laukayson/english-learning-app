@@ -162,40 +162,72 @@ class ConversationalAI:
         }
     
     def _initialize_selenium_chatbot(self):
-        """Initialize the Render-based chatbot service"""
+        """Initialize the original Selenium-based chatbot service"""
         try:
-            # Initialize selenium directly for Render
-            from selenium import webdriver
-            from selenium.webdriver.chrome.options import Options
+            # Import and initialize your original selenium chatbot
+            from selenium_chatbot import SeleniumChatbot
             import uuid
             
             # Generate unique session ID
             self.user_context['session_id'] = str(uuid.uuid4())
             
-            # Configure Chrome options for Render
-            chrome_options = Options()
-            chrome_options.add_argument('--headless')
-            chrome_options.add_argument('--no-sandbox')
-            chrome_options.add_argument('--disable-dev-shm-usage')
-            chrome_options.add_argument('--disable-gpu')
-            chrome_options.add_argument('--window-size=1920,1080')
+            # Initialize the original selenium chatbot with proper settings
+            self.selenium_client = SeleniumChatbot(
+                headless=True,  # Run headless on Render
+                timeout=30
+            )
             
-            # Initialize WebDriver
-            self.selenium_client = webdriver.Chrome(options=chrome_options)
-            
-            if self.selenium_client:
-                # Test if the service is available
-                self.selenium_client.get('https://www.google.com')
+            # Try to initialize the chatbot
+            if self.selenium_client.initialize():
                 self.session_active = True
-                logger.info(f"🤖 Render chatbot service initialized (session: {self.user_context['session_id']})")
+                logger.info(f"✅ Original Selenium chatbot service initialized (session: {self.user_context['session_id']})")
             else:
-                logger.warning("Render selenium client not available")
+                logger.warning("Original Selenium chatbot initialization failed")
+                self.selenium_client = None
                 self.session_active = False
                 
         except Exception as e:
-            logger.error(f"Failed to initialize Render chatbot service: {str(e)}")
+            logger.error(f"Failed to initialize original Selenium chatbot service: {str(e)}")
             self.selenium_client = None
             self.session_active = False
+    
+    def _create_educational_response(self, message: str, topic: str, user_level: str) -> str:
+        """Create an educational response when selenium fails"""
+        # This is a backup method that creates contextually appropriate responses
+        response_templates = {
+            'beginner': [
+                f"That's interesting! When talking about {topic}, I would say: ",
+                f"Good question about {topic}! Let me help you practice: ",
+                f"Nice! For {topic} conversations, try saying: "
+            ],
+            'intermediate': [
+                f"Great point about {topic}! You could also express that as: ",
+                f"I understand your question about {topic}. Consider this perspective: ",
+                f"That's a thoughtful observation about {topic}. Another way to think about it: "
+            ],
+            'advanced': [
+                f"Excellent insight regarding {topic}! This reminds me of: ",
+                f"Your question about {topic} touches on an important aspect. Consider: ",
+                f"That's a sophisticated point about {topic}. You might also explore: "
+            ]
+        }
+        
+        templates = response_templates.get(user_level, response_templates['beginner'])
+        import random
+        template = random.choice(templates)
+        
+        # Generate contextual response based on topic
+        topic_responses = {
+            'family': "spending quality time with family members and sharing stories about our daily lives.",
+            'work': "balancing professional responsibilities while pursuing personal growth and learning opportunities.",
+            'hobbies': "discovering new activities that bring joy and help us connect with like-minded people.",
+            'food': "exploring different cuisines and the cultural stories behind traditional dishes.",
+            'travel': "experiencing new places and learning about different cultures and ways of life."
+        }
+        
+        topic_content = topic_responses.get(topic, f"exploring different aspects of {topic} and sharing personal experiences.")
+        
+        return f"{template}{topic_content} What are your thoughts on this?"
     
     def analyze_message_context(self, message: str) -> Dict[str, Any]:
         """Analyze the user's message for context and intent"""
@@ -247,22 +279,25 @@ class ConversationalAI:
             if history:
                 self.conversation_history = history
             
-            # Try to use Render selenium client first (if properly configured)
+            # Use Selenium chatbot for actual AI responses
             if self.selenium_client and self.use_selenium:
                 try:
-                    # For now, use fallback since we need proper chatbot integration
-                    # This could be enhanced later with actual chatbot automation
-                    logger.info("Selenium client available but using fallback for better reliability")
-                    response = None  # Force fallback
-                    
+                    # Use the selenium chatbot implementation
+                    response = self.selenium_client.get_response(
+                        message=message,
+                        topic=topic,
+                        history=history,
+                        user_level=user_level
+                    )
                     if response and response.strip():
                         # Add this interaction to our conversation history
                         self._update_conversation_history(message, response)
                         return response
                 except Exception as e:
-                    logger.warning(f"Render chatbot service failed, falling back to contextual responses: {e}")
+                    logger.warning(f"Selenium chatbot service failed: {e}")
             
-            # Fallback to contextual response system (primary method for now)
+            # Only use fallback if selenium explicitly fails
+            logger.info("Using contextual response fallback")
             response = self.generate_contextual_response(message, history)
             
             # Add topic-specific elements if appropriate
