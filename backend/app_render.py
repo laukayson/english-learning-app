@@ -596,6 +596,50 @@ def get_features():
 def favicon():
     return '', 204
 
+# Debug endpoint for testing settings-based progress tracking
+@app.route('/api/debug/test-progress', methods=['GET'])
+def test_progress():
+    """Test the new settings-based progress tracking system"""
+    try:
+        # Test with a sample user
+        test_user_id = 'test_progress_user'
+        
+        # Create or get a test user
+        users = db_service.execute_query('SELECT * FROM users WHERE id = ? LIMIT 1', (test_user_id,))
+        if not users:
+            # Create test user
+            db_service.execute_update(
+                'INSERT INTO users (id, email, password_hash, settings) VALUES (?, ?, ?, ?)',
+                (test_user_id, 'test@progress.com', 'test_hash', '{}')
+            )
+            logger.info(f"Created test user: {test_user_id}")
+        
+        # Test getting progress (should work with settings storage)
+        progress = db_service.get_user_progress(test_user_id)
+        logger.info(f"Retrieved progress: {progress}")
+        
+        # Test adding experience points
+        add_result = db_service.add_experience_points(test_user_id, 50)
+        logger.info(f"Add experience result: {add_result}")
+        
+        # Get progress again to see if it updated
+        updated_progress = db_service.get_user_progress(test_user_id)
+        logger.info(f"Updated progress: {updated_progress}")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Progress tracking test completed - using settings storage only',
+            'initial_progress': progress,
+            'add_experience_result': add_result,
+            'updated_progress': updated_progress,
+            'test_user_id': test_user_id,
+            'method': 'settings_storage_only'
+        })
+        
+    except Exception as e:
+        logger.error(f"Progress test failed: {e}")
+        return jsonify({'error': str(e), 'type': str(type(e))}), 500
+
 # Debug endpoint for fixing user_progress table structure
 @app.route('/api/debug/fix-user-progress')
 def fix_user_progress_table():
