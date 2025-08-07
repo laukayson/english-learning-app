@@ -46,6 +46,8 @@ class TursoService:
         """Initialize Turso client"""
         try:
             logger.info("Creating Turso client...")
+            logger.info(f"Database URL: {self.database_url[:50]}...")
+            logger.info(f"Auth token length: {len(self.auth_token) if self.auth_token else 0}")
             
             # Try different client creation approaches
             import asyncio
@@ -66,6 +68,7 @@ class TursoService:
                 # Method 2: Create event loop if none exists
                 try:
                     loop = asyncio.get_event_loop()
+                    logger.info("Using existing event loop")
                 except RuntimeError:
                     # No event loop, create one
                     loop = asyncio.new_event_loop()
@@ -81,18 +84,30 @@ class TursoService:
             
             # Test the connection with a simple query
             try:
+                logger.info("Testing Turso connection...")
                 result = self.client.execute("SELECT 1")
                 logger.info("✅ Connected to Turso database successfully")
                 logger.info(f"Query result: {result}")
                 return True
             except Exception as test_error:
                 logger.warning(f"Turso connection test failed: {test_error}")
+                logger.warning(f"Error type: {type(test_error).__name__}")
+                
+                # If it's a WebSocket error, it might be a network/firewall issue on Render
+                if "WSServerHandshakeError" in str(type(test_error)) or "505" in str(test_error):
+                    logger.error("❌ WebSocket handshake failed - possible network/firewall issue on Render")
+                    logger.error("This is often caused by Render's network restrictions or Turso region issues")
+                    logger.error("Consider using a different Turso region or checking firewall rules")
+                
                 raise test_error
                 
         except Exception as e:
             logger.error(f"❌ Failed to connect to Turso: {e}")
             logger.error(f"Error type: {type(e).__name__}")
             logger.error(f"Error details: {str(e)}")
+            
+            # For deployment, we'll fall back to SQLite but keep trying Turso
+            logger.warning("🔄 Falling back to SQLite but will retry Turso connection periodically")
             self._fallback_to_sqlite()
             return False
     

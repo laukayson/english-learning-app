@@ -5,28 +5,48 @@ services:
     env: python
     plan: free
     buildCommand: |
+      # Show current user and permissions
+      whoami
+      id
       # Update package lists with error checking
       apt-get update || echo "apt-get update failed"
-      # Install Chromium with verbose output
-      apt-get install -y chromium-browser chromium-chromedriver || echo "chromium install failed"
+      # Try installing Chromium via snap first (more reliable)
+      snap install chromium || echo "snap chromium install failed"
+      # Check snap installation
+      snap list | grep chromium || echo "no chromium snap found"
+      ls -la /snap/bin/chromium* || echo "no chromium in /snap/bin"
+      # Try traditional apt installation as fallback
+      apt-get install -y chromium-browser || echo "apt chromium install failed"
       # Check what was actually installed
       dpkg -l | grep chromium || echo "no chromium packages found"
-      # Manual verification
+      # Manual verification of all possible locations
       ls -la /usr/bin/chromium* || echo "no chromium binaries in /usr/bin"
+      ls -la /snap/bin/chromium* || echo "no chromium binaries in /snap/bin"
       ls -la /usr/bin/google-chrome* || echo "no chrome binaries in /usr/bin"
-      # Try installing without chromium-chromedriver if main package fails
-      apt-get install -y chromium-browser || echo "basic chromium install failed"
-      # Create Chrome compatibility symlinks if chromium exists
-      if [ -f /usr/bin/chromium-browser ]; then
-        ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome-stable
-        ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome
-        ln -sf /usr/bin/chromium-browser /usr/local/bin/google-chrome
-        echo "Chromium symlinks created"
+      # Create Chrome compatibility symlinks for any found chromium
+      CHROMIUM_PATH=""
+      if [ -f /snap/bin/chromium ]; then
+        CHROMIUM_PATH="/snap/bin/chromium"
+        echo "Found Chromium via snap"
+      elif [ -f /usr/bin/chromium-browser ]; then
+        CHROMIUM_PATH="/usr/bin/chromium-browser"
+        echo "Found Chromium via apt"
+      elif [ -f /usr/bin/chromium ]; then
+        CHROMIUM_PATH="/usr/bin/chromium"
+        echo "Found Chromium as chromium"
+      fi
+      
+      if [ -n "$CHROMIUM_PATH" ]; then
+        ln -sf "$CHROMIUM_PATH" /usr/bin/google-chrome-stable
+        ln -sf "$CHROMIUM_PATH" /usr/bin/google-chrome
+        ln -sf "$CHROMIUM_PATH" /usr/local/bin/google-chrome
+        echo "Chromium symlinks created using $CHROMIUM_PATH"
       else
-        echo "Chromium not found, cannot create symlinks"
+        echo "❌ No Chromium found anywhere"
       fi
       # Final verification
       which chromium-browser || echo "chromium-browser not in PATH"
+      which chromium || echo "chromium not in PATH"
       which google-chrome || echo "google-chrome not in PATH"
       # Install Python dependencies
       pip install -r requirements.txt
@@ -47,6 +67,6 @@ services:
       - key: SELENIUM_HEADLESS
         value: true
       - key: GOOGLE_CHROME_BIN
-        value: /usr/bin/chromium-browser
+        value: /snap/bin/chromium
       - key: CHROMEDRIVER_PATH
-        value: /usr/bin/chromedriver
+        value: /snap/bin/chromedriver
